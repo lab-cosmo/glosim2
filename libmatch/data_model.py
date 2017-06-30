@@ -1,5 +1,6 @@
 from collections import MutableMapping,OrderedDict
 import numpy as np
+from utils import atomicnb_to_symbol
 
 class AlchemySoap(MutableMapping):
 

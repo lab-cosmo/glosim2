@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def AvgKernel(kdict,zeta):
+def avgKernel(kdict,zeta):
     rows = np.array([key[0] for key in kdict.keys()])
     cols = np.array([key[1] for key in kdict.keys()])
     N = rows.max() + 1

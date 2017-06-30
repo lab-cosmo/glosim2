@@ -1,5 +1,5 @@
 import threading
-
+import numpy as np
 
 def make_singlethread(inner_func):
     def func(**kargs):
@@ -42,7 +42,8 @@ def make_multithread_envKernel(inner_func, numthreadsTot):
             for jt in range(numthreads):
                 # chunks3 = result[it * chunklen1:(it + 1) * chunklen1,jt * chunklen2:(jt + 1) * chunklen2]
                 chunks3 = result[it * chunklen1:(it + 1) * chunklen1, jt * chunklen2:(jt + 1) * chunklen2]
-                a = {'result': chunks3, 'chemicalKernelmat': chemicalKernelmat, 'keys1': keys1, 'keys2': keys2}
+                a = {'result': chunks3, 'chemicalKernelmat': chemicalKernelmat.copy(),
+                     'keys1': keys1.copy(), 'keys2': keys2.copy()}
 
                 a.update(**chunks1[it])
                 a.update(**chunks2[jt])
