@@ -38,7 +38,7 @@ def compile_with_threads(nbfunc, nthreads=1):
 def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
     Nenv1, nA, nL = vals1.shape
     Nenv2, nB, nL = vals2.shape
-    threadstate = savethread()
+    #threadstate = savethread()
     for it in range(Nenv1):
         for jt in range(Nenv2):
             EnvironmentalSimilarity = 0.
@@ -67,7 +67,7 @@ def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
                         EnvironmentalSimilarity += theta1 * pp
 
             result[it, jt] = EnvironmentalSimilarity
-    restorethread(threadstate)
+    #restorethread(threadstate)
 
 
 def np_frameprod1(keys1, vals1, keys2, vals2, chemicalKernelmat):
