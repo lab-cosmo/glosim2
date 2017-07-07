@@ -20,7 +20,7 @@ def compile_with_threads(nbfunc, nthreads=1):
     signatureEnv = nb.void(nd2d, nd2int, nd3d, nd2int, nd3d, nd2d)
 
     inner_func_nbupper = nb.jit(
-        signatureEnv, nopython=True, nogil=True)(nbfunc)
+        signatureEnv, nopython=True, nogil=True, parallel=True)(nbfunc)
 
     if nthreads == 1:
         print('1 threaded calc')
