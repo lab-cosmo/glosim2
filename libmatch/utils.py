@@ -50,6 +50,30 @@ def get_spkit(atom):
             spkit[z] = 1
     return spkit
 
+def Atoms2ChemicalKernelmat(atoms,chemicalKernel=deltaKernel):
+    # unique sp in frames 1 and 2
+    uk1 = []
+    for frame in atoms:
+        uk1.extend(frame.get_atomic_numbers())
+    uk1 = list(set(uk1))
+
+    # 0 row and col are here but dont matter
+    chemicalKernelmat = np.zeros((Nsp1,Nsp1))
+    for it in uk1:
+        for jt in uk1:
+            chemicalKernelmat[it,jt] = chemicalKernel(it,jt)
+    return chemicalKernelmat
+
+
+def are_envKernel_same(knp,knb):
+    a = True
+    for key in knb:
+        if not np.allclose(knp[key],knb[key]):
+            a = False
+            print('##### {}'.format(key))
+    print('the two are same ? -> {}'.format(a))
+    return a
+
 def envIdx2centerIdxMap(atoms,spkit,nocenters=None):
     if nocenters is None:
         nocenters = []

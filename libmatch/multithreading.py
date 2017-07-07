@@ -1,5 +1,90 @@
+
+import quippy as qp
 import threading
 import numpy as np
+from copy import deepcopy
+import multiprocessing as mp
+import os
+
+
+def chunk_list(lll, nchunks):
+    N = len(lll)
+    if nchunks == 1:
+
+        slices = [range(N)]
+        chunks = [lll]
+    else:
+        chunklen = N // nchunks
+        chunkrest = N % nchunks
+        slices = [range(i * chunklen, (i + 1) * chunklen) for i in range(nchunks)]
+        for it in range(chunkrest):
+            slices[-1].append(slices[-1][-1] + 1)
+        chunks = [lll[slices[i][0]:slices[i][-1] + 1] for i in range(nchunks)]
+
+    return chunks, slices
+
+
+def chunks1d_2_chuncks2d(chunk_1d, **kargs):
+    if isinstance(chunk_1d[0], qp.io.AtomsList):
+        key = ['atoms1', 'atoms2']
+    elif isinstance(chunk_1d[0], np.ndarray):
+        key = ['vals1', 'vals2']
+    else:
+        key = ['frames1', 'frames2']
+    chunks = []
+    iii = 0
+    for nt, ch1 in enumerate(chunk_1d):
+        for mt, ch2 in enumerate(chunk_1d):
+            if nt > mt:
+                continue
+            if nt == mt:
+
+                aa = {key[0]: deepcopy(ch1), key[1]: None}
+                bb = deepcopy(kargs)
+                aa.update(**bb)
+                chunks.append(aa)
+            else:
+
+                aa = {key[0]: deepcopy(ch1), key[1]: deepcopy(ch2)}
+                bb = deepcopy(kargs)
+                aa.update(**bb)
+                chunks.append(aa)
+            iii += 1
+    return chunks
+
+
+def join_envKernel(results, slices):
+    rr = list(set([it for sl in slices for it in sl]))
+    joined_results = {(it, jt): None for it in rr for jt in rr if jt >= it}
+
+    iii = 0
+    for nt, sl1 in enumerate(slices):
+        for mt, sl2 in enumerate(slices):
+            if nt > mt:
+                continue
+
+            if np.all(sl1 == sl2):
+
+                for it, s1 in enumerate(sl1):
+                    for jt, s2 in enumerate(sl2):
+                        if s1 > s2:
+                            continue
+                        try:
+                            joined_results[(s1, s2)] = results[iii][(it, jt)]
+                        except:
+                            print s1, s2, it, jt
+            else:
+
+                for it, s1 in enumerate(sl1):
+                    for jt, s2 in enumerate(sl2):
+                        try:
+                            joined_results[(s1, s2)] = results[iii][(it, jt)]
+                        except:
+                            print s1, s2, it, jt
+
+            iii += 1
+    return joined_results
+
 
 def make_singlethread(inner_func):
     def func(**kargs):
