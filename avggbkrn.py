@@ -30,6 +30,18 @@ def framesprod_wrapper(kargs):
     return framesprod(frameprodFunc=nb_mtfunc, **kargs)
 
 
+def mp_framesprod(chunks,nprocess):
+    pool = mp.Pool(nprocess)
+    res = pool.map_async(framesprod_wrapper, chunks)
+
+    results = res.get()
+
+    pool.close()
+    pool.join()
+
+    return results
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Computes the SOAP vectors of a list of atomic frame 
             and differenciate the chemical channels. Ready for alchemical kernel.""")
@@ -123,16 +135,10 @@ if __name__ == '__main__':
 
     chunks = chunks1d_2_chuncks2d(chunks1d, **pp)
 
-    print 'Init Pool of {} workers: {}'.format(nprocess, s2hms(time.time() - st) )
+    print 'Compute soap and environmental kernels with ' \
+          'a pool of {} workers over {} chunks: {}'.format(nprocess,nchunks, s2hms(time.time() - st) )
 
-    pool = mp.Pool(nprocess)
-
-    res = pool.map_async(framesprod_wrapper, chunks)
-
-    results = res.get()
-
-    pool.close()
-    pool.join()
+    results = mp_framesprod(chunks,nprocess)
 
     environmentalKernels = join_envKernel(results, slices)
 
@@ -140,7 +146,7 @@ if __name__ == '__main__':
 
     globalKernel = avgKernel(environmentalKernels, zeta)
 
-    print 'Compute global average kernel: done {}'.format(s2hms(time.time() - st))
+    print 'Compute global average kernel with zeta={} : done {}'.format(zeta,s2hms(time.time() - st))
 
     if outformat == 'text':
         np.savetxt(prefix + ".k",globalKernel)
