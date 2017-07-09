@@ -4,41 +4,28 @@ from ctypes import pythonapi, c_void_p
 from multithreading import make_multithread_envKernel,make_singlethread
 
 
-savethread = pythonapi.PyEval_SaveThread
-savethread.argtypes = []
-savethread.restype = c_void_p
+def compile_with_threads(nbfunc,nthreads=1):
 
-restorethread = pythonapi.PyEval_RestoreThread
-restorethread.argtypes = [c_void_p]
-restorethread.restype = None
+    nd2d = nb.double[:,:]; nd2int = nb.uint32[:,:]; nd3d = nb.double[:,:,:]
+    signatureEnv = nb.void(nd2d, nd2int,  nd3d,nd2int, nd3d, nd2d)
 
-
-def compile_with_threads(nbfunc, nthreads=1):
-    nd2d = nb.double[:, :]
-    nd2int = nb.uint32[:, :]
-    nd3d = nb.double[:, :, :]
-    signatureEnv = nb.void(nd2d, nd2int, nd3d, nd2int, nd3d, nd2d)
-
-    inner_func_nbupper = nb.jit(
-        signatureEnv, nopython=True, nogil=True, parallel=True)(nbfunc)
+    inner_func_nbupper = nb.jit(signatureEnv, nopython=True,nogil=True)(nbfunc)
 
     if nthreads == 1:
         print('1 threaded calc')
         func_nbupper = make_singlethread(inner_func_nbupper)
-    elif nthreads in [2 ** it for it in range(2, 11)]:
+    elif nthreads in [2,4,6,9]:
         print('{:.0f} threaded calc'.format(nthreads))
         func_nbupper = make_multithread_envKernel(inner_func_nbupper, nthreads)
     else:
         print('Unsuported nthreads number\n 1 threaded calc')
         func_nbupper = make_singlethread(inner_func_nbupper)
-
     return func_nbupper
 
 
 def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
     Nenv1, nA, nL = vals1.shape
     Nenv2, nB, nL = vals2.shape
-    #threadstate = savethread()
     for it in range(Nenv1):
         for jt in range(Nenv2):
             EnvironmentalSimilarity = 0.
@@ -67,7 +54,6 @@ def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
                         EnvironmentalSimilarity += theta1 * pp
 
             result[it, jt] = EnvironmentalSimilarity
-    #restorethread(threadstate)
 
 
 def np_frameprod1(keys1, vals1, keys2, vals2, chemicalKernelmat):

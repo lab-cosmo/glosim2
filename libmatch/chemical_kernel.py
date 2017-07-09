@@ -11,6 +11,22 @@ def deltaKernel(spA ,spB):
     else:
         return 0.
 
+def Atoms2ChemicalKernelmat(atoms,chemicalKernel=deltaKernel):
+    # unique sp in frames 1 and 2
+    uk1 = []
+    for frame in atoms:
+        uk1.extend(frame.get_atomic_numbers())
+    uk1 = list(set(uk1))
+    Nsp1 = max(uk1)+1
+    # 0 row and col are here but dont matter
+    chemicalKernelmat = np.zeros((Nsp1,Nsp1))
+    for it in uk1:
+        for jt in uk1:
+            chemicalKernelmat[it,jt] = chemicalKernel(it,jt)
+    return chemicalKernelmat
+
+
+
 def get_chemicalKernelmatFrames(frames1 ,frames2=None ,chemicalKernel=deltaKernel):
     # unique sp in frames 1 and 2
     uk1 = []
