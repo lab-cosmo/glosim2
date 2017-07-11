@@ -35,14 +35,15 @@ def compile_envKernel_with_thread(nthreads=1):
 
 def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
     '''
-    Computes the environmental matrix between two AlchemyFrame.
+    Computes the environmental matrix between two AlchemyFrame. Only the upper
+    chemical channels are actually computed. To be compiled with numba.
     :param result: np.array. output
     :param keys1: np.array 2D. list of keys->(species1,species2), i.e. chemical channels, of AlchemyFrame1.
     :param vals1: np.array 3D. [environment center, chemical channel, soap vector].
     :param keys2: np.array 2D. list of keys->(species1,species2), i.e. chemical channels, of AlchemyFrame2.
     :param vals2: np.array 3D. [environment center, chemical channel, soap vector].
     :param chemicalKernelmat: np.array 2D.
-    :return: np.array 2D. Environmental matrix.
+    :return: None. result is changed by 'reference'.
     '''
     Nenv1, nA, nL = vals1.shape
     Nenv2, nB, nL = vals2.shape
@@ -76,26 +77,18 @@ def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
             result[it, jt] = EnvironmentalSimilarity
 
 
-def np_frameprod1(keys1, vals1, keys2, vals2, chemicalKernelmat):
-    Nenv1, Na, Nsoap = vals1.shape
-    Nenv2, Nb, Nsoap = vals2.shape
-
-    k = np.zeros((Nenv1, Nenv2))
-    for it in range(Nenv1):
-        for jt in range(Nenv2):
-            similarity = 0.
-            for nt, spA in enumerate(keys1):
-                for mt, spB in enumerate(keys2):
-                    theta = chemicalKernelmat[spA[0], spB[0]] * chemicalKernelmat[spA[1], spB[1]]
-                    if theta != 0.:
-                        similarity += theta * np.vdot(vals1[it, nt, :], vals2[jt, mt, :])
-
-            k[it, jt] = similarity
-
-    return k
-
-
 def np_frameprod_upper(keys1, vals1, keys2, vals2, chemicalKernelmat):
+    '''
+    Computes the environmental matrix between two AlchemyFrame. Simplest implementation, very slow.
+    Only the upperchemical channels are actually computed.
+
+    :param keys1: np.array 2D. list of keys->(species1,species2), i.e. chemical channels, of AlchemyFrame1.
+    :param vals1: np.array 3D. [environment center, chemical channel, soap vector].
+    :param keys2: np.array 2D. list of keys->(species1,species2), i.e. chemical channels, of AlchemyFrame2.
+    :param vals2: np.array 3D. [environment center, chemical channel, soap vector].
+    :param chemicalKernelmat: np.array 2D.
+    :return: np.array 2D. Environmental matrix.
+    '''
     nenv1, Na, Nsoap = vals1.shape
     nenv2, Nb, Nsoap = vals2.shape
     k = np.zeros((nenv1, nenv2))
@@ -125,6 +118,17 @@ def np_frameprod_upper(keys1, vals1, keys2, vals2, chemicalKernelmat):
     return k
 
 def np_frameprod3(keys1, vals1, keys2, vals2, chemicalKernelmat):
+    '''
+    Computes the environmental matrix between two AlchemyFrame. einsum implementaion, ~slow.
+    Only the upperchemical channels are actually computed.
+
+    :param keys1: np.array 2D. list of keys->(species1,species2), i.e. chemical channels, of AlchemyFrame1.
+    :param vals1: np.array 3D. [environment center, chemical channel, soap vector].
+    :param keys2: np.array 2D. list of keys->(species1,species2), i.e. chemical channels, of AlchemyFrame2.
+    :param vals2: np.array 3D. [environment center, chemical channel, soap vector].
+    :param chemicalKernelmat: np.array 2D.
+    :return: np.array 2D. Environmental matrix.
+    '''
     Nenv1, Na, Nsoap = vals1.shape
     Nenv2, Nb, Nsoap = vals2.shape
 
@@ -150,8 +154,18 @@ def np_frameprod3(keys1, vals1, keys2, vals2, chemicalKernelmat):
 
 
 def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None):
+    '''
+    Computes the environmental matrices between two list of AlchemyFrame.
+
+    :param frames1: list of AlchemyFrame.
+    :param frames2: list of AlchemyFrame.
+    :param chemicalKernelmat:
+    :param frameprodFunc: function to use to compute a environmental kernel matrix
+    :return: dictionary of environmental kernel matrices. the keys (i,j)->environmentalMatrix(frames1[i],frames2[j])
+    '''
     envkernels = {}
     if frames2 is None:
+        # when with itself only the upper global matrix is computed
         frames2 = frames1
         for it, frame1 in enumerate(frames1):
             keys1, vals1 = frame1.get_arrays()

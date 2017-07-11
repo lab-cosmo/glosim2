@@ -241,3 +241,4 @@ def Soap2AlchemySoap(rawsoap, spkitMax, nmax, lmax):
 
     return alchemySoapdict
 
+# TODO impelement get_avgSoap see https://libatoms.github.io/QUIP/descriptors.html

@@ -3,7 +3,10 @@ import numpy as np
 from utils import atomicnb_to_symbol
 
 class AlchemySoap(MutableMapping):
+    '''
+    Container class for the soap vectors in their alchemy format.
 
+    '''
     def __init__(self ,qpatoms ,soapParams ,centerIdx ,nocenters=None):
         # keys is a list of all the possible key that are needed in the dictionary
         if nocenters is None:
@@ -321,3 +324,6 @@ class AlchemyFrame(AtomicFrame, MutableMapping):
                 alchemyArray[it, jt, :] = env[key]
 
         return allKeys, alchemyArray
+
+
+# TODO impelement AverageFrame

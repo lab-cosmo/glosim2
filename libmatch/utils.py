@@ -1,7 +1,4 @@
-
-
 import numpy  as np
-from libmatch.chemical_kernel import deltaKernel
 
 def s2hms(time):
     m = time // 60
