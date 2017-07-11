@@ -2,6 +2,38 @@ import quippy as qp
 import numpy  as np
 from utils import get_spkit,get_spkitMax,envIdx2centerIdxMap
 from data_model import AlchemyFrame,AlchemySoap
+import multiprocessing as mp
+from multithreading import chunk_list
+
+def mp_get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
+              cutoff_transition_width=0.5, nmax=8, lmax=6, nchunks=4, nprocess=4):
+    def get_Soaps_wrapper(kargs):
+        return get_Soaps(**kargs)
+
+    chunks1d, slices = chunk_list(atoms, nchunks=nchunks)
+
+    params = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
+              'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
+              'nmax': nmax, 'lmax': lmax,'chem_channels': chem_channels, 'nocenters': nocenters}
+
+    chunks = []
+    for chunk in chunks1d:
+        dd = {'atoms': chunk}
+        dd.update(**params)
+        chunks.append(dd)
+
+    pool = mp.Pool(nprocess)
+
+    results = pool.map(get_Soaps_wrapper, chunks)
+
+    pool.close()
+    pool.join()
+
+    Frames = []
+    for result in results:
+        Frames.extend(result)
+
+    return Frames
 
 def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
               cutoff_transition_width=0.5, nmax=8, lmax=6):

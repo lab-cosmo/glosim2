@@ -1,25 +1,60 @@
 import numpy as np
 import numba as nb
-from ctypes import pythonapi, c_void_p
-from multithreading import make_multithread_envKernel,make_singlethread
+from multithreading import make_multithread_envKernel,make_singlethread_envKernel
+from soap import get_Soaps
+import multiprocessing as mp
 
+def mp_framesprod(chunks,nprocess,nthreads):
 
-def compile_with_threads(nbfunc,nthreads=1):
+    try:
+        print 'Using compiled and threaded of envKernel function'
+        get_envKernel = compile_envKernel_with_thread(nthreads)
+    except:
+        print 'Using numpy version of envKernel function'
+        get_envKernel = np_frameprod3
+
+    def framesprod_wrapper(kargs):
+        keys = kargs.keys()
+
+        if 'atoms1' in keys:
+            atoms1 = kargs.pop('atoms1')
+            atoms2 = kargs.pop('atoms2')
+            chemicalKernelmat = kargs.pop('chemicalKernelmat')
+
+            frames1 = get_Soaps(atoms1, **kargs)
+            if atoms2 is not None:
+                frames2 = get_Soaps(atoms2, **kargs)
+            else:
+                frames2 = None
+
+            kargs = {'frames1': frames1, 'frames2': frames2, 'chemicalKernelmat': chemicalKernelmat}
+
+        return framesprod(frameprodFunc=get_envKernel, **kargs)
+
+    pool = mp.Pool(nprocess)
+    results = pool.map(framesprod_wrapper, chunks)
+
+    pool.close()
+    pool.join()
+
+    return results
+
+def compile_envKernel_with_thread(nthreads=1):
 
     nd2d = nb.double[:,:]; nd2int = nb.uint32[:,:]; nd3d = nb.double[:,:,:]
     signatureEnv = nb.void(nd2d, nd2int,  nd3d,nd2int, nd3d, nd2d)
 
-    inner_func_nbupper = nb.jit(signatureEnv, nopython=True,nogil=True)(nbfunc)
+    inner_func_nbupper = nb.jit(signatureEnv, nopython=True,nogil=True)(nb_frameprod_upper)
 
     if nthreads == 1:
         print('1 threaded calc')
-        func_nbupper = make_singlethread(inner_func_nbupper)
+        func_nbupper = make_singlethread_envKernel(inner_func_nbupper)
     elif nthreads in [2,4,6,9]:
         print('{:.0f} threaded calc'.format(nthreads))
         func_nbupper = make_multithread_envKernel(inner_func_nbupper, nthreads)
     else:
         print('Unsuported nthreads number\n 1 threaded calc')
-        func_nbupper = make_singlethread(inner_func_nbupper)
+        func_nbupper = make_singlethread_envKernel(inner_func_nbupper)
     return func_nbupper
 
 

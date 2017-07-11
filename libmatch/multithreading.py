@@ -3,8 +3,7 @@ import quippy as qp
 import threading
 import numpy as np
 from copy import deepcopy
-import multiprocessing as mp
-import os
+
 
 
 def chunk_list(lll, nchunks):
@@ -83,7 +82,7 @@ def join_envKernel(results, slices):
     return joined_results
 
 
-def make_singlethread(inner_func):
+def make_singlethread_envKernel(inner_func):
     def func(**kargs):
         Nenv1, nA, nL = kargs['vals1'].shape
         Nenv2, nB, nL = kargs['vals2'].shape
@@ -101,7 +100,6 @@ def make_multithread_envKernel(inner_func, numthreadsTot):
         Nenv2, nB, nL = kargs['vals2'].shape
         result = np.zeros((Nenv1, Nenv2), dtype=np.float64)
 
-        keys = kargs.keys()
 
         keys1, keys2, vals1, vals2, chemicalKernelmat = [kargs['keys1'], kargs['keys2'], kargs['vals1'], kargs['vals2'], \
                                                          kargs['chemicalKernelmat']]
