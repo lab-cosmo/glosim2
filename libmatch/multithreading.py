@@ -100,7 +100,6 @@ def make_multithread_envKernel(inner_func, numthreadsTot):
         Nenv2, nB, nL = kargs['vals2'].shape
         result = np.zeros((Nenv1, Nenv2), dtype=np.float64)
 
-
         keys1, keys2, vals1, vals2, chemicalKernelmat = [kargs['keys1'], kargs['keys2'], kargs['vals1'], kargs['vals2'], \
                                                          kargs['chemicalKernelmat']]
 
