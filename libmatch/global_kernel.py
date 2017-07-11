@@ -135,7 +135,7 @@ def compile_rematch():
 
 def normalizeKernel(kernel):
     n,m = kernel.shape
+    diag = np.diag(kernel)
     for it in range(n):
-        for jt in range(m):
-            kernel[it,jt] = kernel[it,jt] / sqrt(kernel[it,it]* kernel[jt,jt])
+        kernel[it,:] /= np.sqrt(diag[it] * diag)
     return kernel
