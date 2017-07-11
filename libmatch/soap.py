@@ -10,11 +10,14 @@ def mp_get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, g
     def get_Soaps_wrapper(kargs):
         return get_Soaps(**kargs)
 
+    spkitMax = get_spkitMax(atoms)
+
     chunks1d, slices = chunk_list(atoms, nchunks=nchunks)
 
     params = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
               'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-              'nmax': nmax, 'lmax': lmax,'chem_channels': chem_channels, 'nocenters': nocenters}
+              'nmax': nmax, 'lmax': lmax,'chem_channels': chem_channels, 'nocenters': nocenters,
+              'spkitMax':spkitMax}
 
     chunks = []
     for chunk in chunks1d:
@@ -36,7 +39,7 @@ def mp_get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, g
     return Frames
 
 def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
-              cutoff_transition_width=0.5, nmax=8, lmax=6):
+              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None):
     '''
     Compute the SOAP vectors for each atomic environment in atoms and
     reorder them into chemical channels.
@@ -60,7 +63,8 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
 
     Frames = []
     # get the set of species their maximum number across atoms
-    spkitMax = get_spkitMax(atoms)
+    if spkitMax is None:
+        spkitMax = get_spkitMax(atoms)
 
     soapParams = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
                   'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
