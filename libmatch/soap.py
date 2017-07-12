@@ -3,7 +3,8 @@ import numpy  as np
 from utils import get_spkit,get_spkitMax,envIdx2centerIdxMap
 from data_model import AlchemyFrame,AlchemySoap
 import multiprocessing as mp
-from multithreading import chunk_list
+from libmatch.utils import chunk_list
+
 
 def mp_get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
               cutoff_transition_width=0.5, nmax=8, lmax=6, nchunks=4, nprocess=4):

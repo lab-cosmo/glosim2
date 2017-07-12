@@ -1,4 +1,8 @@
+from copy import deepcopy
+
 import numpy  as np
+import quippy as qp
+
 
 def s2hms(time):
     m = time // 60
@@ -92,3 +96,46 @@ def ase2qp(aseatoms):
     numbers = aseatoms.get_atomic_numbers()
     pbc = aseatoms.get_pbc()
     return qpAtoms(numbers=numbers,cell=cell,positions=positions,pbc=pbc)
+
+
+def chunk_list(lll, nchunks):
+    N = len(lll)
+    if nchunks == 1:
+        slices = [range(N)]
+        chunks = [lll]
+    else:
+        chunklen = N // nchunks
+        chunkrest = N % nchunks
+        slices = [range(i * chunklen, (i + 1) * chunklen) for i in range(nchunks)]
+        for it in range(chunkrest):
+            slices[-1].append(slices[-1][-1] + 1)
+        chunks = [lll[slices[i][0]:slices[i][-1] + 1] for i in range(nchunks)]
+
+    return chunks, slices
+
+
+def chunks1d_2_chuncks2d(chunk_1d, **kargs):
+    if isinstance(chunk_1d[0], qp.io.AtomsList):
+        key = ['atoms1', 'atoms2']
+    else:
+        key = ['frames1', 'frames2']
+    chunks = []
+    iii = 0
+    for nt, ch1 in enumerate(chunk_1d):
+        for mt, ch2 in enumerate(chunk_1d):
+            if nt > mt:
+                continue
+            if nt == mt:
+
+                aa = {key[0]: ch1, key[1]: None}
+                bb = kargs
+                aa.update(**bb)
+                chunks.append(deepcopy(aa))
+            else:
+
+                aa = {key[0]: ch1, key[1]: ch2}
+                bb = kargs
+                aa.update(**bb)
+                chunks.append(deepcopy(aa))
+            iii += 1
+    return chunks
