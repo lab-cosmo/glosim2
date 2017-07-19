@@ -1,6 +1,6 @@
 from collections import MutableMapping,OrderedDict
 import numpy as np
-from utils import atomicnb_to_symbol
+from utils import atomicnb_to_symbol,get_localEnv
 
 class AlchemySoap(MutableMapping):
     '''
@@ -12,7 +12,7 @@ class AlchemySoap(MutableMapping):
         if nocenters is None:
             nocenters = []
 
-        z = list(set(qpatoms.z))
+        z = list(set(qpatoms.get_atomic_numbers()))
         a = []
         for z1 in z:
             if z1 in nocenters: continue
@@ -35,6 +35,15 @@ class AlchemySoap(MutableMapping):
         self._position = qpatoms.positions[centerIdx ,:]
         self._atomic_number = qpatoms.get_atomic_numbers()[centerIdx]
         self._cell = qpatoms.get_cell()
+        self._chemical_symbol = qpatoms.get_chemical_symbols()[centerIdx]
+        self._info = {}
+        for key,item in qpatoms.arrays.iteritems():
+            if key in ['positions','numbers','species','map_shift','n_neighb']:
+                continue
+            self._info[key] = item[centerIdx]
+
+        self._localEnvironementDict = get_localEnv(qpatoms, centerIdx,
+                                                   self._soapParams['cutoff'], onlyDict=True)
 
         upperKeys = []
 
@@ -67,7 +76,15 @@ class AlchemySoap(MutableMapping):
     def get_allKeys(self):
         return self._allKeys
     def get_centerInfo(self):
-        return {'z' :self._atomic_number ,'position' :self._position ,'cell' :self._cell ,'idx' :self._frameIdx}
+        from ase import Atoms as aseAtoms
+        info = {'z' :self._atomic_number ,'position' :self._position ,
+                'cell' :self._cell ,'idx' :self._frameIdx,
+                'symbol':self._chemical_symbol,'env': aseAtoms(**self._localEnvironementDict)}
+        info.update(**self._info)
+        return info
+    def get_localEnvironement(self):
+        from ase import Atoms as aseAtoms
+        return aseAtoms(**self._localEnvironementDict)
     def get_filledKeys(self):
         return self._filledKeys
     def get_emptyKeys(self):
@@ -171,7 +188,7 @@ class AtomicFrame(object):
 
     def get_atom(self):
         from ase import Atoms as aseAtoms
-        return aseAtoms(symbols=self._chemical_formula,
+        return aseAtoms(numbers=self._atomic_numbers,
                         positions=self._positions,
                         cell=self._cell,
                         pbc=self._pbc)

@@ -1,14 +1,15 @@
 
-import quippy as qp
-import numpy  as np
 import argparse
 import time
-from libmatch.soap import get_Soaps
-from libmatch.chemical_kernel import Atoms2ChemicalKernelmat,deltaKernel,randKernel
-from libmatch.environmental_kernel import framesprod, mp_framesprod, choose_envKernel_func, join_envKernel
-from libmatch.global_kernel import avgKernel,rematchKernel,normalizeKernel
-from libmatch.utils import s2hms, chunk_list, chunks1d_2_chuncks2d
-import multiprocessing as mp
+
+import numpy  as np
+import quippy as qp
+
+from libmatch.chemical_kernel import Atoms2ChemicalKernelmat, deltaKernel
+from libmatch.environmental_kernel import get_environmentalKernels_mt_mp_chunks, \
+    get_environmentalKernels_singleprocess
+from libmatch.global_kernel import avgKernel, rematchKernel, normalizeKernel
+from libmatch.utils import s2hms
 
 try:
     import numba as nb
@@ -91,7 +92,7 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
         kargs = {'frameprodFunc':get_envKernel,'nthreads':nthreads}
         kargs.update(**soap_params)
         # get the environmental kernels as a dictionary
-        environmentalKernels = get_environmentalKernels_mt(**kargs)
+        environmentalKernels = get_environmentalKernels_singleprocess(**kargs)
     else:
         kargs = {'nthreads':nthreads,'nprocess':nprocess, 'nchunks':nchunks}
         kargs.update(**soap_params)
@@ -105,71 +106,6 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
         
     return environmentalKernels
 
-def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
-                             gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
-                             nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                             nthreads=4, nprocess=2, nchunks=2):
-    if nocenters is None:
-        nocenters = []
-
-    # Builds the kernel matrix from the species present in the frames and a specified chemical
-    # kernel function
-    if chemicalKernelmat is not None:
-        pass
-    elif (chemicalKernelmat is None) and (chemicalKernel is not None):
-        chemicalKernelmat = Atoms2ChemicalKernelmat(atoms, chemicalKernel=chemicalKernel)
-    else:
-        raise ValueError('wrong chemicalKernelmat and/or chemicalKernel input')
-
-    # cut atomsList in chunks
-    chunks1d, slices = chunk_list(atoms, nchunks=nchunks)
-
-    soap_params = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
-                   'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-                   'nmax': nmax, 'lmax': lmax, 'chemicalKernelmat': chemicalKernelmat,
-                   'chem_channels': chem_channels, 'nocenters': nocenters,
-                   }
-
-    # create inputs for each block of the global kernel matrix
-    chunks = chunks1d_2_chuncks2d(chunks1d, **soap_params)
-
-
-    # get a list of environemental kernels
-    pool = mp_framesprod(chunks, nprocess, nthreads)
-    results = pool.run()
-    # reorder the list of environemental kernels into a dictionary which keys are the (i,j) of the global kernel matrix
-    environmentalKernels = join_envKernel(results, slices)
-
-    return environmentalKernels
-
-
-def get_environmentalKernels_mt(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
-                             gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
-                             nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                             nthreads=4, nprocess=0, nchunks=0):
-    if nocenters is None:
-        nocenters = []
-
-
-    # Chooses the function to use to compute the kernel between two frames
-    get_envKernel = choose_envKernel_func(nthreads)
-
-    # Builds the kernel matrix from the species present in the frames and a specified chemical
-    # kernel function
-    if chemicalKernelmat is None and chemicalKernel is not None:
-        chemicalKernelmat = Atoms2ChemicalKernelmat(atoms, chemicalKernel=chemicalKernel)
-    else:
-        raise ValueError('wrong chemicalKernelmat and/or chemicalKernel input')
-
-    # get the soap for every local environement
-    frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels,
-                       centerweight=centerweight, gaussian_width=gaussian_width, cutoff=cutoff,
-                       cutoff_transition_width=cutoff_transition_width, nmax=nmax, lmax=lmax)
-
-    # get the environmental kernels as a dictionary
-    environmentalKernels = framesprod(frames, frameprodFunc=get_envKernel, chemicalKernelmat=chemicalKernelmat)
-
-    return environmentalKernels
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Computes the Global average/rematch kernel.""")
@@ -269,8 +205,6 @@ if __name__ == '__main__':
 
     print 'Reading {} input atomic structure from {}: done {}'.format(n,filename,s2hms(time.time() - st))
 
-
-
     environmentalKernels = get_environmentalKernels(
                                 nthreads=nthreads,nprocess=nprocess, nchunks=nchunks,
                                 **soap_params)
@@ -278,9 +212,6 @@ if __name__ == '__main__':
     print 'Compute environmental kernels: done {}'.format(s2hms(time.time() - st))
 
     # Reduce the environemental kernels into global kernels
-
-
-
     globalKernel = get_globalKernel(kernel_type=global_kernel_type, zeta=zeta, gamma=gamma,
                                     eps=1e-6, nthreads=8,
                                     normalize_global_kernel=normalize_global_kernel)

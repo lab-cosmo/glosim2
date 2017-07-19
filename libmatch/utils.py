@@ -82,13 +82,23 @@ def envIdx2centerIdxMap(atoms,spkit,nocenters=None):
             ii += 1
     return dd
 
+
 def qp2ase(qpatoms):
     from ase import Atoms as aseAtoms
     positions = qpatoms.get_positions()
     cell = qpatoms.get_cell()
-    symbols = qpatoms.get_chemical_formula()
+    numbers = qpatoms.get_atomic_numbers()
     pbc = qpatoms.get_pbc()
-    return aseAtoms(symbols=symbols,cell=cell,positions=positions,pbc=pbc)
+    atoms = aseAtoms(numbers=numbers, cell=cell, positions=positions, pbc=pbc)
+
+
+    for key, item in qpatoms.arrays.iteritems():
+        if key in ['positions', 'numbers', 'species', 'map_shift', 'n_neighb']:
+            continue
+        atoms.set_array(key, item)
+
+    return atoms
+
 def ase2qp(aseatoms):
     from quippy import Atoms as qpAtoms
     positions = aseatoms.get_positions()
@@ -97,6 +107,54 @@ def ase2qp(aseatoms):
     pbc = aseatoms.get_pbc()
     return qpAtoms(numbers=numbers,cell=cell,positions=positions,pbc=pbc)
 
+
+def get_localEnv(frame, centerIdx, cutoff,onlyDict=False):
+    '''
+    Get the local atomic environment around an atom in an atomic frame.
+
+    :param frame: ase or quippy Atoms object
+    :param centerIdx: int
+    Index of the local environment center.
+    :param cutoff: float
+    Cutoff radius of the local environment.
+    :return: ase Atoms object
+    Local atomic environment. The center atom is in first position.
+    '''
+    import ase.atoms
+    import quippy.atoms
+    from ase.neighborlist import NeighborList
+    from ase import Atoms as aseAtoms
+    if isinstance(frame, quippy.atoms.Atoms):
+        atoms = qp2ase(frame)
+    elif isinstance(frame, ase.atoms.Atoms):
+        atoms = frame
+    else:
+        raise ValueError
+
+    n = len(atoms.get_atomic_numbers())
+    nl = NeighborList([cutoff / 2., ] * n, skin=0., sorted=False, self_interaction=False, bothways=True)
+    nl.build(atoms)
+
+    cell = atoms.get_cell()
+    pbc = atoms.get_pbc()
+    pos = atoms.get_positions()
+    positions = [pos[centerIdx], ]
+    zList = atoms.get_atomic_numbers()
+    numbers = [zList[centerIdx],]
+
+    indices, offsets = nl.get_neighbors(centerIdx)
+
+    # print offsets,len(atom.get_atomic_numbers())
+    for i, offset in zip(indices, offsets):
+        positions.append(pos[i] + np.dot(offset, cell))
+        numbers.append(zList[i])
+
+    atomsParam = dict(numbers=numbers, cell=cell, positions=positions, pbc=pbc)
+
+    if onlyDict:
+        return atomsParam
+    else:
+        return aseAtoms(**atomsParam)
 
 def chunk_list(lll, nchunks):
     N = len(lll)
