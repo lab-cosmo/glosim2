@@ -2,6 +2,10 @@ from collections import MutableMapping,OrderedDict
 import numpy as np
 from utils import atomicnb_to_symbol,get_localEnv
 
+
+garbageKey = ['positions','numbers','species','map_shift','n_neighb']
+
+
 class AlchemySoap(MutableMapping):
     '''
     Container class for the soap vectors in their alchemy format.
@@ -38,9 +42,9 @@ class AlchemySoap(MutableMapping):
         self._chemical_symbol = qpatoms.get_chemical_symbols()[centerIdx]
         self._info = {}
         for key,item in qpatoms.arrays.iteritems():
-            if key in ['positions','numbers','species','map_shift','n_neighb']:
+            if key in garbageKey:
                 continue
-            self._info[key] = item[centerIdx]
+            self._info[key] = item[centerIdx].copy()
 
         self._localEnvironementDict = get_localEnv(qpatoms, centerIdx,
                                                    self._soapParams['cutoff'], onlyDict=True)
@@ -157,16 +161,25 @@ class AlchemySoap(MutableMapping):
 
 
 class AtomicFrame(object):
-    def __init__(self, atom, nocenters, soapParams):
-        # atom is a libatom Atom object
+    def __init__(self, qpatoms, nocenters, soapParams):
+        # qpatoms is a libatom Atom object
 
-        self._atomic_numbers = atom.get_atomic_numbers()
-        self._chemical_formula = atom.get_chemical_formula(mode='hill')
-        self._positions = atom.get_positions()
+        self._atomic_numbers = qpatoms.get_atomic_numbers()
+        self._chemical_formula = qpatoms.get_chemical_formula(mode='hill')
+        self._positions = qpatoms.get_positions()
         self._nocenters = nocenters
-        self._cell = atom.get_cell()
-        self._pbc = atom.get_pbc()
+        self._cell = qpatoms.get_cell()
+        self._pbc = qpatoms.get_pbc()
         self._soapParams = soapParams
+
+        self._infoDict = {}
+        for key,item in qpatoms.arrays.iteritems():
+            if key in garbageKey:
+                continue
+            self._infoDict[key] = item.copy()
+
+    def get_info(self):
+        return self._infoDict
 
     def get_atomic_numbers(self):
         return self._atomic_numbers
@@ -188,10 +201,13 @@ class AtomicFrame(object):
 
     def get_atom(self):
         from ase import Atoms as aseAtoms
-        return aseAtoms(numbers=self._atomic_numbers,
+        frame = aseAtoms(numbers=self._atomic_numbers,
                         positions=self._positions,
                         cell=self._cell,
                         pbc=self._pbc)
+        for key,item in self._infoDict.iteritems():
+            frame.set_array(key,item)
+        return frame
 
     def get_soapParams(self):
         return self._soapParams

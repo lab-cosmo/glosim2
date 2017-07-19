@@ -91,7 +91,6 @@ def qp2ase(qpatoms):
     pbc = qpatoms.get_pbc()
     atoms = aseAtoms(numbers=numbers, cell=cell, positions=positions, pbc=pbc)
 
-
     for key, item in qpatoms.arrays.iteritems():
         if key in ['positions', 'numbers', 'species', 'map_shift', 'n_neighb']:
             continue
