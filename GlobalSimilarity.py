@@ -89,7 +89,7 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
                    }
     
     if nchunks == 1:
-        kargs = {'frameprodFunc':get_envKernel,'nthreads':nthreads}
+        kargs = {'nthreads':nthreads}
         kargs.update(**soap_params)
         # get the environmental kernels as a dictionary
         environmentalKernels = get_environmentalKernels_singleprocess(**kargs)
@@ -98,10 +98,6 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
         kargs.update(**soap_params)
 
 
-        print 'Compute soap and environmental kernels with ' \
-              'a pool of {} workers and {} threads over {} chunks: {}'.format(nprocess, nthreads,
-                                                                              nchunks * (nchunks + 1) // 2,
-                                                                              s2hms(time.time() - st))
         environmentalKernels = get_environmentalKernels_mt_mp_chunks(**kargs)
         
     return environmentalKernels
@@ -205,6 +201,13 @@ if __name__ == '__main__':
 
     print 'Reading {} input atomic structure from {}: done {}'.format(n,filename,s2hms(time.time() - st))
 
+    if nchunks == 1:
+        print 'Compute soap and environmental kernels with {} : {}'.format(nthreads,s2hms(time.time() - st))
+    else:
+        print 'Compute soap and environmental kernels with ' \
+              'a pool of {} workers and {} threads over {} chunks: {}'.format(nprocess, nthreads,
+                                                                              nchunks * (nchunks + 1) // 2,
+                                                                              s2hms(time.time() - st))
     environmentalKernels = get_environmentalKernels(
                                 nthreads=nthreads,nprocess=nprocess, nchunks=nchunks,
                                 **soap_params)

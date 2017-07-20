@@ -163,7 +163,7 @@ class AlchemySoap(MutableMapping):
 class AtomicFrame(object):
     def __init__(self, qpatoms, nocenters, soapParams):
         # qpatoms is a libatom Atom object
-
+        super(AtomicFrame, self).__init__()
         self._atomic_numbers = qpatoms.get_atomic_numbers()
         self._chemical_formula = qpatoms.get_chemical_formula(mode='hill')
         self._positions = qpatoms.get_positions()
@@ -217,6 +217,7 @@ class AlchemyFrame(AtomicFrame, MutableMapping):
     def __init__(self, atom, nocenters, soapParams):
         # atom is a libatom Atom object
         super(AlchemyFrame, self).__init__(atom, nocenters, soapParams)
+
         self.valdtype = np.float64
         self.keydtype = np.uint32
 
@@ -229,9 +230,9 @@ class AlchemyFrame(AtomicFrame, MutableMapping):
 
         allKeys = []
         for z1 in uniquez:
-            if z1 in nocenters: continue
+            #if z1 in nocenters: continue
             for z2 in uniquez:
-                if z2 in nocenters: continue
+                #if z2 in nocenters: continue
                 allKeys.append((z1, z2))
 
         self._allKeys = allKeys

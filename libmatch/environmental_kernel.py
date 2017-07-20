@@ -328,6 +328,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 
     # Builds the kernel matrix from the species present in the frames and a specified chemical
     # kernel function
+
     if chemicalKernelmat is not None:
         pass
     elif (chemicalKernelmat is None) and (chemicalKernel is not None):
@@ -369,7 +370,9 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
 
     # Builds the kernel matrix from the species present in the frames and a specified chemical
     # kernel function
-    if chemicalKernelmat is None and chemicalKernel is not None:
+    if chemicalKernelmat is not None:
+        pass
+    elif chemicalKernelmat is None and chemicalKernel is not None:
         chemicalKernelmat = Atoms2ChemicalKernelmat(atoms, chemicalKernel=chemicalKernel)
     else:
         raise ValueError('wrong chemicalKernelmat and/or chemicalKernel input')
