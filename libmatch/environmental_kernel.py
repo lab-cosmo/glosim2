@@ -2,10 +2,13 @@ import numpy as np
 
 from libmatch.chemical_kernel import Atoms2ChemicalKernelmat
 from libmatch.soap import get_Soaps
-from libmatch.utils import chunk_list, chunks1d_2_chuncks2d
+from libmatch.utils import chunk_list, chunks1d_2_chuncks2d,is_notebook
 from soap import get_Soaps
 import multiprocessing as mp
+import signal, psutil, os
 import threading
+import os
+from tqdm import tqdm
 
 try:
     import numba as nb
@@ -61,7 +64,46 @@ try:
 except:
     nonumba = True
 
-def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None):
+
+# def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None):
+#     '''
+#     Computes the environmental matrices between two list of AlchemyFrame.
+#
+#     :param frames1: list of AlchemyFrame.
+#     :param frames2: list of AlchemyFrame.
+#     :param chemicalKernelmat:
+#     :param frameprodFunc: function to use to compute a environmental kernel matrix
+#     :return: dictionary of environmental kernel matrices -> (i,j):environmentalMatrix(frames1[i],frames2[j])
+#     '''
+#     envkernels = {}
+#     if frames2 is None:
+#         # when with itself only the upper global matrix is computed
+#         frames2 = frames1
+#         for it, frame1 in enumerate(frames1):
+#             keys1, vals1 = frame1.get_arrays()
+#             for jt, frame2 in enumerate(frames2):
+#                 if it > jt:
+#                     continue
+#                 keys2, vals2 = frame2.get_arrays()
+#                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+#                          'chemicalKernelmat': chemicalKernelmat}
+#                 envkernels[(it, jt)] = frameprodFunc(**kargs)
+#
+#
+#     else:
+#         for it, frame1 in enumerate(frames1):
+#             keys1, vals1 = frame1.get_arrays()
+#             for jt, frame2 in enumerate(frames2):
+#                 keys2, vals2 = frame2.get_arrays()
+#                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+#                          'chemicalKernelmat': chemicalKernelmat}
+#                 envkernels[(it, jt)] = frameprodFunc(**kargs)
+#
+#     return envkernels
+
+
+
+def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None, queue=None):
     '''
     Computes the environmental matrices between two list of AlchemyFrame.
 
@@ -71,32 +113,69 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
     :param frameprodFunc: function to use to compute a environmental kernel matrix
     :return: dictionary of environmental kernel matrices -> (i,j):environmentalMatrix(frames1[i],frames2[j])
     '''
+    disable_pbar = True
+
+    if is_notebook():
+        from tqdm import tqdm_notebook as tqdm_cs
+        ascii = False
+    else:
+        from tqdm import tqdm as tqdm_cs
+        ascii = True
+
+    if queue is None:
+        class dummy_queue(object):
+            def __init__(self):
+                super(dummy_queue,self).__init__()
+            def put(self,ii):
+                pass
+        queue = dummy_queue()
+        disable_pbar = False
+
+    proc_id = os.getpid()
+    proc_name = mp.current_process().name
+    if proc_name == 'MainProcess':
+        pos = 0
+    else:
+        sss = proc_name.split('-')
+        pos = int(sss[-1])
+
     envkernels = {}
+
+
     if frames2 is None:
         # when with itself only the upper global matrix is computed
         frames2 = frames1
-        for it, frame1 in enumerate(frames1):
-            keys1, vals1 = frame1.get_arrays()
-            for jt, frame2 in enumerate(frames2):
-                if it > jt:
-                    continue
-                keys2, vals2 = frame2.get_arrays()
-                kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-                         'chemicalKernelmat': chemicalKernelmat}
-                envkernels[(it, jt)] = frameprodFunc(**kargs)
-
-        return envkernels
-
+        n = len(frames1)
+        with tqdm_cs(total=int(n*(n-1)/2.),desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=True,disable=disable_pbar) as pbar:
+            for it, frame1 in enumerate(frames1):
+                keys1, vals1 = frame1.get_arrays()
+                ii = 0
+                for jt, frame2 in enumerate(frames2):
+                    if it > jt:
+                        continue
+                    keys2, vals2 = frame2.get_arrays()
+                    kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+                             'chemicalKernelmat': chemicalKernelmat}
+                    envkernels[(it, jt)] = frameprodFunc(**kargs)
+                    ii += 1
+                pbar.update(ii)
+                queue.put(ii)
     else:
-        for it, frame1 in enumerate(frames1):
-            keys1, vals1 = frame1.get_arrays()
-            for jt, frame2 in enumerate(frames2):
-                keys2, vals2 = frame2.get_arrays()
-                kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-                         'chemicalKernelmat': chemicalKernelmat}
-                envkernels[(it, jt)] = frameprodFunc(**kargs)
-
-        return envkernels
+        n1 = len(frames1)
+        n2 = len(frames2)
+        with tqdm_cs(total=int(n1*n2), desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=True,disable=disable_pbar) as pbar:
+            for it, frame1 in enumerate(frames1):
+                keys1, vals1 = frame1.get_arrays()
+                ii = 0
+                for jt, frame2 in enumerate(frames2):
+                    keys2, vals2 = frame2.get_arrays()
+                    kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+                             'chemicalKernelmat': chemicalKernelmat}
+                    envkernels[(it, jt)] = frameprodFunc(**kargs)
+                    ii += 1
+                pbar.update(ii)
+                queue.put(ii)
+    return envkernels
 
 def nb_frameprod_upper_multithread(**kargs):
     Nenv1, nA, nL = kargs['vals1'].shape
@@ -116,7 +195,7 @@ def nb_frameprod_upper_multithread(**kargs):
     for it in range(numthreads1):
         for jt in range(numthreads2):
             chunks3 = result[slices1[it][0]:slices1[it][-1] + 1, slices2[jt][0]:slices2[jt][-1] + 1]
-            a = {'result': chunks3, 'chemicalKernelmat': chemicalKernelmat, 'keys1': keys1, 'keys2': keys2}
+            a = {'result': chunks3, 'chemicalKernelmat': chemicalKernelmat.copy(), 'keys1': keys1.copy(), 'keys2': keys2.copy()}
             a.update(**{'vals1': chunks1[it]})
             a.update(**{'vals2': chunks2[jt]})
 
@@ -247,43 +326,99 @@ def choose_envKernel_func(nthreads=4):
 def framesprod_wrapper(kargs):
     keys = kargs.keys()
     get_envKernel = kargs.pop('frameprodFunc')
-
+    queue = kargs.pop('queue')
     if 'atoms1' in keys:
         atoms1 = kargs.pop('atoms1')
         atoms2 = kargs.pop('atoms2')
         chemicalKernelmat = kargs.pop('chemicalKernelmat')
 
-        frames1 = get_Soaps(atoms1, **kargs)
+        frames1 = get_Soaps(atoms1,  **kargs)
         if atoms2 is not None:
-            frames2 = get_Soaps(atoms2, **kargs)
+            frames2 = get_Soaps(atoms2,  **kargs)
         else:
             frames2 = None
 
         kargs = {'frames1': frames1, 'frames2': frames2, 'chemicalKernelmat': chemicalKernelmat}
 
-    return framesprod(frameprodFunc=get_envKernel,**kargs)
+    return framesprod(queue=queue,frameprodFunc=get_envKernel,**kargs)
+
+# class mp_framesprod(object):
+#     def __init__(self, chunks, nprocess, nthreads):
+#
+#         self.nprocess = nprocess
+#         self.nthreads = nthreads
+#         self.func = framesprod_wrapper
+#         # get the function to compute an environmental kernel
+#         self.get_envKernel = choose_envKernel_func(nthreads)
+#         # add the frameprodFunc to the input chunks
+#         for chunk in chunks:
+#             chunk.update(**{'frameprodFunc': self.get_envKernel})
+#         self.chunks = chunks
+#
+#     def run(self):
+#         pool = mp.Pool(self.nprocess)
+#         results = pool.map(self.func, self.chunks)
+#
+#         pool.close()
+#         pool.join()
+#
+#         return results
 
 class mp_framesprod(object):
-    def __init__(self, chunks, nprocess, nthreads):
+    def __init__(self, chunks, nprocess, nthreads, Niter):
+        super(mp_framesprod, self).__init__()
+        self.func = framesprod_wrapper
+        self.parent_id = os.getpid()
+        self.get_envKernel = choose_envKernel_func(nthreads)
 
         self.nprocess = nprocess
         self.nthreads = nthreads
-        self.func = framesprod_wrapper
-        # get the function to compute an environmental kernel
-        self.get_envKernel = choose_envKernel_func(nthreads)
-        # add the frameprodFunc to the input chunks
+
+        manager = mp.Manager()
+        self.queue = manager.Queue()
+
         for chunk in chunks:
-            chunk.update(**{'frameprodFunc': self.get_envKernel})
+            chunk.update(**{"queue": self.queue,'frameprodFunc': self.get_envKernel})
         self.chunks = chunks
 
+        self.thread = threading.Thread(target=self.listener, args=(self.queue, Niter))
+        self.thread.start()
+        self.pool = mp.Pool(nprocess, initializer=self.worker_init,maxtasksperchild=1)
+
     def run(self):
-        pool = mp.Pool(self.nprocess)
-        results = pool.map(self.func, self.chunks)
+        res = self.pool.map(self.func, self.chunks)
+        self.pool.close()
+        self.pool.join()
+        self.queue.put(None)
+        self.thread.join()
+        return res
 
-        pool.close()
-        pool.join()
+    @staticmethod
+    def listener(queue, Niter):
+        if is_notebook():
+            from tqdm import tqdm_notebook as tqdm_cs
+        else:
+            from tqdm import tqdm as tqdm_cs
 
-        return results
+        tbar = tqdm_cs(total=int(Niter))
+        for ii in iter(queue.get, None):
+            tbar.update(ii)
+        tbar.close()
+
+    def worker_init(self):
+        def sig_int(signal_num, frame):
+            print('signal: %s' % signal_num)
+            parent = psutil.Process(self.parent_id)
+            for child in parent.children():
+                if child.pid != os.getpid():
+                    print("killing child: %s" % child.pid)
+                    child.kill()
+            print("killing parent: %s" % self.parent_id)
+            parent.kill()
+            print("suicide: %s" % os.getpid())
+            psutil.Process(os.getpid()).kill()
+
+        signal.signal(signal.SIGINT, sig_int)
 
 
 def join_envKernel(results, slices):
@@ -336,6 +471,8 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     else:
         raise ValueError('wrong chemicalKernelmat and/or chemicalKernel input')
 
+    Natoms = len(atoms)
+    NenvKernels = Natoms * (Natoms + 1) / 2.
     # cut atomsList in chunks
     chunks1d, slices = chunk_list(atoms, nchunks=nchunks)
 
@@ -350,7 +487,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 
 
     # get a list of environemental kernels
-    pool = mp_framesprod(chunks, nprocess, nthreads)
+    pool = mp_framesprod(chunks, nprocess, nthreads, NenvKernels)
     results = pool.run()
     # reorder the list of environemental kernels into a dictionary which keys are the (i,j) of the global kernel matrix
     environmentalKernels = join_envKernel(results, slices)
@@ -378,11 +515,12 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
         raise ValueError('wrong chemicalKernelmat and/or chemicalKernel input')
 
     # get the soap for every local environement
-    frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels,
-                       centerweight=centerweight, gaussian_width=gaussian_width, cutoff=cutoff,
-                       cutoff_transition_width=cutoff_transition_width, nmax=nmax, lmax=lmax)
+    frames = get_Soaps(atoms,nprocess=mp.cpu_count(), nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
+                       gaussian_width=gaussian_width, cutoff=cutoff, cutoff_transition_width=cutoff_transition_width,
+                       nmax=nmax, lmax=lmax)
 
     # get the environmental kernels as a dictionary
     environmentalKernels = framesprod(frames, frameprodFunc=get_envKernel, chemicalKernelmat=chemicalKernelmat)
+
 
     return environmentalKernels

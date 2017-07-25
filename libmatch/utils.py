@@ -182,17 +182,58 @@ def chunks1d_2_chuncks2d(chunk_1d, **kargs):
         for mt, ch2 in enumerate(chunk_1d):
             if nt > mt:
                 continue
-            if nt == mt:
-
-                aa = {key[0]: ch1, key[1]: None}
-                bb = kargs
-                aa.update(**bb)
-                chunks.append(deepcopy(aa))
-            else:
-
+            if nt < mt:
                 aa = {key[0]: ch1, key[1]: ch2}
-                bb = kargs
-                aa.update(**bb)
-                chunks.append(deepcopy(aa))
+                # bb = kargs
+                aa.update(**kargs)
+                # chunks.append(deepcopy(aa))
+                chunks.append(aa)
+
+            elif nt == mt:
+                aa = {key[0]: ch1, key[1]: None}
+                # bb = kargs
+                aa.update(**kargs)
+                # chunks.append(deepcopy(aa))
+                chunks.append(aa)
+
             iii += 1
+
+
     return chunks
+
+
+def is_notebook():
+    from IPython import get_ipython
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
+def get_soapSize(frames, nmax, lmax, dtype=None):
+    '''
+    Estimate the maximum size of the alchemical soap vectors generated from the input frames in Mb.
+    '''
+    if dtype is None:
+        Nbyte = 8
+    else:
+        Nbyte = dtype
+
+    Nsoap = nmax ** 2 * (lmax + 1)
+
+    totSize = 0
+    for frame in frames:
+        Nspecies = len(set(frame.get_atomic_numbers()))
+        # assumes we use all possible center atoms
+        Nenv = frame.get_number_of_atoms()
+        # assumes we store the upper triangular chemical combinations within the frame (which is not true in practice)
+        # totSize += Nsoap*(Nspecies**2)*Nenv*Nbyte
+        totSize += Nsoap * Nenv * Nbyte * Nspecies * (Nspecies + 1) / 2.
+
+    print 'Max size of the SOAP descriptors: {:.0f} Mb'.format(totSize // 1e6)
+    return totSize // 1e6

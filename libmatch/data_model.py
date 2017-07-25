@@ -58,6 +58,10 @@ class AlchemySoap(MutableMapping):
             self[key] = self._empty
         self._upperKeys = list(set(upperKeys))
 
+    def __del__(self):
+        for values in self.__dict__.values():
+            del values
+
     def from_dict(self ,dictionary):
         filledKeys = []
         for key ,item in dictionary.iteritems():
@@ -178,6 +182,10 @@ class AtomicFrame(object):
                 continue
             self._infoDict[key] = item.copy()
 
+    def __del__(self):
+        for values in self.__dict__.values():
+            del values
+
     def get_info(self):
         return self._infoDict
 
@@ -240,7 +248,9 @@ class AlchemyFrame(AtomicFrame, MutableMapping):
         for key in self._allKeys:
             upperKeys.append(tuple(sorted(key)))
         self._upperKeys = np.array(list(set(upperKeys)))
-
+    def __del__(self):
+        for values in self.__dict__.values():
+            del values
     def __setitem__(self, key, item):
         # asarray does not copy if the types are matching
         assert isinstance(item, AlchemySoap)

@@ -19,7 +19,7 @@ except:
     nonumba = True
 
 
-def get_globalKernel(kernel_type='average',zeta=2,gamma=1.,eps=1e-6,nthreads=8,
+def get_globalKernel(environmentalKernels,kernel_type='average',zeta=2,gamma=1.,eps=1e-6,nthreads=8,
                      normalize_global_kernel=False):
     '''
     Reduce the environemental kernels dictionary into a global kernel.
@@ -35,11 +35,8 @@ def get_globalKernel(kernel_type='average',zeta=2,gamma=1.,eps=1e-6,nthreads=8,
 
     if kernel_type == 'average':
         globalKernel = avgKernel(environmentalKernels, zeta)
-        print 'Compute global average kernel with zeta={} : done {}'.format(zeta, s2hms(time.time() - st))
-
     elif kernel_type == 'rematch':
         globalKernel = rematchKernel(environmentalKernels, gamma=gamma, eps=eps, nthreads=nthreads)
-        print 'Compute global rematch kernel with gamma={} : done {}'.format(gamma, s2hms(time.time() - st))
     else:
         raise ValueError('This kernel type: {}, does not exist.'.format(kernel_type))
 
@@ -130,7 +127,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    ###### Reads parameters input ######
+
+###### Reads parameters input ######
     filename = args.filename[0]
     prefix = args.prefix
     centerweight = args.cw
