@@ -231,14 +231,10 @@ def nb_frameprod_upper_multithread(**kargs):
 
             chunks.append(a)
 
-    threads = [threading.Thread(target=nb_frameprod_upper, kwargs=chunk) for chunk in chunks[:-1]]
+    threads = [threading.Thread(target=nb_frameprod_upper, kwargs=chunk) for chunk in chunks]
 
     for thread in threads:
         thread.start()
-
-    # the main thread handles the last chunk
-    nb_frameprod_upper(**chunks[-1])
-
     for thread in threads:
         thread.join()
     return result
@@ -431,7 +427,7 @@ class mp_framesprod(object):
         else:
             from tqdm import tqdm as tqdm_cs
 
-        tbar = tqdm_cs(total=int(Niter))
+        tbar = tqdm_cs(total=int(Niter),ascii=True)
         for ii in iter(queue.get, None):
             tbar.update(ii)
         tbar.close()

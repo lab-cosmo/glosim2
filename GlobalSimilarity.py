@@ -4,6 +4,7 @@ import time
 
 import numpy  as np
 import quippy as qp
+import cPickle as pck
 
 from libmatch.chemical_kernel import Atoms2ChemicalKernelmat, deltaKernel
 from libmatch.environmental_kernel import get_environmentalKernels_mt_mp_chunks, \
@@ -124,6 +125,7 @@ if __name__ == '__main__':
     parser.add_argument("-nc","--nchunks", type=int, default=4, help="Number of chunks to divide the global kernel matrix in.")
     parser.add_argument("--nocenters", type=str, default="",help="Comma-separated list of atom Z to be ignored as environment centers (e.g. --nocenter 1,2,4)")
     parser.add_argument("-ngk","--normalize-global-kernel", action='store_true', help="Normalize global kernel")
+    parser.add_argument("-sek", "--save-env-kernels", action='store_true', help="Save environmental kernels")
 
     args = parser.parse_args()
 
@@ -146,7 +148,7 @@ if __name__ == '__main__':
     nprocess = args.nprocess
     nchunks = args.nchunks
     normalize_global_kernel = args.normalize_global_kernel
-
+    save_env_kernels = args.save_env_kernels
 
     first = args.first if args.first>0 else None
     last = args.last if args.last>0 else None
@@ -173,6 +175,8 @@ if __name__ == '__main__':
     prefix += "-n"+str(nmax)+"-l"+str(lmax)+"-c"+str(cutoff)+\
              "-g"+str(gaussian_width)+ "-cw"+str(centerweight)+ \
              "-cotw" +str(cutoff_transition_width)
+    fn_env_kernels = prefix+'-env_kernels.pck'
+
     if global_kernel_type == 'average':
         prefix += '-average-zeta{:.0f}'.format(zeta)
     elif global_kernel_type == 'rematch':
@@ -211,6 +215,10 @@ if __name__ == '__main__':
                                 **soap_params)
 
     print 'Compute environmental kernels: done {}'.format(s2hms(time.time() - st))
+
+    if save_env_kernels:
+        with open(fn_env_kernels,'wb') as f:
+            pck.dump(environmentalKernels,f,protocol=pck.HIGHEST_PROTOCOL)
 
     # Reduce the environemental kernels into global kernels
     globalKernel = get_globalKernel(environmentalKernels,kernel_type=global_kernel_type, zeta=zeta, gamma=gamma,
