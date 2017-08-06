@@ -131,51 +131,81 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
         queue = dummy_queue()
         disable_pbar = False
 
-    proc_id = os.getpid()
+    # proc_id = os.getpid()
     proc_name = mp.current_process().name
-    if proc_name == 'MainProcess':
-        pos = 0
-    else:
-        sss = proc_name.split('-')
-        pos = int(sss[-1])
+
+    # if proc_name == 'MainProcess':
+    #     pos = 0
+    # else:
+    #     sss = proc_name.split('-')
+    #     pos = int(sss[-1])
 
     envkernels = {}
-
 
     if frames2 is None:
         # when with itself only the upper global matrix is computed
         frames2 = frames1
-        n = len(frames1)
-        with tqdm_cs(total=int(n*(n-1)/2.),desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=True,disable=disable_pbar) as pbar:
-            for it, frame1 in enumerate(frames1):
-                keys1, vals1 = frame1.get_arrays()
-                ii = 0
-                for jt, frame2 in enumerate(frames2):
-                    if it > jt:
-                        continue
-                    keys2, vals2 = frame2.get_arrays()
-                    kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-                             'chemicalKernelmat': chemicalKernelmat}
-                    envkernels[(it, jt)] = frameprodFunc(**kargs)
-                    ii += 1
-                pbar.update(ii)
-                queue.put(ii)
+        for it, frame1 in enumerate(frames1):
+            keys1, vals1 = frame1.get_arrays()
+            ii = 0
+            for jt, frame2 in enumerate(frames2):
+                if it > jt:
+                    continue
+                keys2, vals2 = frame2.get_arrays()
+                kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+                         'chemicalKernelmat': chemicalKernelmat}
+                envkernels[(it, jt)] = frameprodFunc(**kargs)
+                ii += 1
+
+            queue.put(ii)
     else:
-        n1 = len(frames1)
-        n2 = len(frames2)
-        with tqdm_cs(total=int(n1*n2), desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=True,disable=disable_pbar) as pbar:
-            for it, frame1 in enumerate(frames1):
-                keys1, vals1 = frame1.get_arrays()
-                ii = 0
-                for jt, frame2 in enumerate(frames2):
-                    keys2, vals2 = frame2.get_arrays()
-                    kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-                             'chemicalKernelmat': chemicalKernelmat}
-                    envkernels[(it, jt)] = frameprodFunc(**kargs)
-                    ii += 1
-                pbar.update(ii)
-                queue.put(ii)
+
+        for it, frame1 in enumerate(frames1):
+            keys1, vals1 = frame1.get_arrays()
+            ii = 0
+            for jt, frame2 in enumerate(frames2):
+                keys2, vals2 = frame2.get_arrays()
+                kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+                         'chemicalKernelmat': chemicalKernelmat}
+                envkernels[(it, jt)] = frameprodFunc(**kargs)
+                ii += 1
+            queue.put(ii)
     return envkernels
+
+    # if frames2 is None:
+    #     # when with itself only the upper global matrix is computed
+    #     frames2 = frames1
+    #     n = len(frames1)
+    #     with tqdm_cs(total=int(n*(n-1)/2.),desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=ascii,disable=disable_pbar) as pbar:
+    #         for it, frame1 in enumerate(frames1):
+    #             keys1, vals1 = frame1.get_arrays()
+    #             ii = 0
+    #             for jt, frame2 in enumerate(frames2):
+    #                 if it > jt:
+    #                     continue
+    #                 keys2, vals2 = frame2.get_arrays()
+    #                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+    #                          'chemicalKernelmat': chemicalKernelmat}
+    #                 envkernels[(it, jt)] = frameprodFunc(**kargs)
+    #                 ii += 1
+    #             pbar.update(ii)
+    #             queue.put(ii)
+    # else:
+    #     n1 = len(frames1)
+    #     n2 = len(frames2)
+    #     with tqdm_cs(total=int(n1*n2), desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=True,disable=disable_pbar) as pbar:
+    #         for it, frame1 in enumerate(frames1):
+    #             keys1, vals1 = frame1.get_arrays()
+    #             ii = 0
+    #             for jt, frame2 in enumerate(frames2):
+    #                 keys2, vals2 = frame2.get_arrays()
+    #                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
+    #                          'chemicalKernelmat': chemicalKernelmat}
+    #                 envkernels[(it, jt)] = frameprodFunc(**kargs)
+    #                 ii += 1
+    #             pbar.update(ii)
+    #             queue.put(ii)
+    # return envkernels
 
 def nb_frameprod_upper_multithread(**kargs):
     Nenv1, nA, nL = kargs['vals1'].shape

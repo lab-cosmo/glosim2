@@ -213,7 +213,7 @@ if __name__ == '__main__':
     print 'Compute environmental kernels: done {}'.format(s2hms(time.time() - st))
 
     # Reduce the environemental kernels into global kernels
-    globalKernel = get_globalKernel(kernel_type=global_kernel_type, zeta=zeta, gamma=gamma,
+    globalKernel = get_globalKernel(environmentalKernels,kernel_type=global_kernel_type, zeta=zeta, gamma=gamma,
                                     eps=1e-6, nthreads=8,
                                     normalize_global_kernel=normalize_global_kernel)
 
