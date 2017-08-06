@@ -327,6 +327,7 @@ def framesprod_wrapper(kargs):
     keys = kargs.keys()
     get_envKernel = kargs.pop('frameprodFunc')
     queue = kargs.pop('queue')
+
     if 'atoms1' in keys:
         atoms1 = kargs.pop('atoms1')
         atoms2 = kargs.pop('atoms2')

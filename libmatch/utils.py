@@ -215,7 +215,7 @@ def is_notebook():
     except NameError:
         return False      # Probably standard Python interpreter
 
-def get_soapSize(frames, nmax, lmax, dtype=None):
+def get_soapSize(frames, nmax, lmax,nocenters=None, dtype=None):
     '''
     Estimate the maximum size of the alchemical soap vectors generated from the input frames in Mb.
     '''
@@ -223,12 +223,14 @@ def get_soapSize(frames, nmax, lmax, dtype=None):
         Nbyte = 8
     else:
         Nbyte = dtype
+    if nocenters is None:
+        nocenters = []
 
     Nsoap = nmax ** 2 * (lmax + 1)
 
     totSize = 0
     for frame in frames:
-        Nspecies = len(set(frame.get_atomic_numbers()))
+        Nspecies = len(set(frame.get_atomic_numbers()).difference(nocenters))
         # assumes we use all possible center atoms
         Nenv = frame.get_number_of_atoms()
         # assumes we store the upper triangular chemical combinations within the frame (which is not true in practice)
