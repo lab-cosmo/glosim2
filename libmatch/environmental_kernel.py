@@ -347,7 +347,7 @@ def choose_envKernel_func(nthreads=4):
         if nthreads == 1:
             print('1 threaded calc')
             get_envKernel = nb_frameprod_upper_singlethread
-        elif nthreads in [2,4,6,9,12]:
+        elif nthreads in [2,4,6,9,12,16,25,36,48,64,81,100]:
             print('{:.0f} threaded calc'.format(nthreads))
             get_envKernel = nb_frameprod_upper_multithread
         else:
