@@ -221,7 +221,9 @@ def nb_frameprod_upper_multithread(**kargs):
     keys1, keys2, vals1, vals2, chemicalKernelmat = [kargs['keys1'], kargs['keys2'], kargs['vals1'], kargs['vals2'], \
                                                      kargs['chemicalKernelmat']]
 
-    numthreadsTot2nthreads = {2: (2, 1), 4: (2, 2), 6: (3, 2), 9: (3, 3), 12: (4, 3)}
+    numthreadsTot2nthreads = {2: (2, 1), 4: (2, 2), 6: (3, 2), 9: (3, 3),
+                              12: (4, 3), 16: (4, 4), 25: (5, 5), 36: (6, 6),
+                              48: (7, 7), 64: (8,8), 81: (9,9), 100: (10,10)}
     numthreads1, numthreads2 = numthreadsTot2nthreads[4]
 
     chunks1, slices1 = chunk_list(vals1, numthreads1)
