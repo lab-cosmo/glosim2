@@ -9,6 +9,7 @@ import signal, psutil, os
 import threading
 import os
 from tqdm import tqdm
+import quippy as qp
 
 try:
     import numba as nb
@@ -124,11 +125,16 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
 
     if queue is None:
         class dummy_queue(object):
-            def __init__(self):
+            def __init__(self,Niter):
                 super(dummy_queue,self).__init__()
+                self.tbar = tqdm_cs(total=int(Niter), ascii=True)
             def put(self,ii):
-                pass
-        queue = dummy_queue()
+                self.tbar.update(ii)
+            def __del__(self):
+                self.tbar.close()
+
+        Niter = len(frames1)*(len(frames1)+1)/2
+        queue = dummy_queue(Niter)
         disable_pbar = False
 
     # proc_id = os.getpid()
@@ -215,7 +221,7 @@ def nb_frameprod_upper_multithread(**kargs):
     keys1, keys2, vals1, vals2, chemicalKernelmat = [kargs['keys1'], kargs['keys2'], kargs['vals1'], kargs['vals2'], \
                                                      kargs['chemicalKernelmat']]
 
-    numthreadsTot2nthreads = {2: (2, 1), 4: (2, 2), 6: (3, 2), 9: (3, 3)}
+    numthreadsTot2nthreads = {2: (2, 1), 4: (2, 2), 6: (3, 2), 9: (3, 3), 12: (4, 3)}
     numthreads1, numthreads2 = numthreadsTot2nthreads[4]
 
     chunks1, slices1 = chunk_list(vals1, numthreads1)
@@ -339,7 +345,7 @@ def choose_envKernel_func(nthreads=4):
         if nthreads == 1:
             print('1 threaded calc')
             get_envKernel = nb_frameprod_upper_singlethread
-        elif nthreads in [2,4,6,9]:
+        elif nthreads in [2,4,6,9,12]:
             print('{:.0f} threaded calc'.format(nthreads))
             get_envKernel = nb_frameprod_upper_multithread
         else:
@@ -354,7 +360,24 @@ def framesprod_wrapper(kargs):
     get_envKernel = kargs.pop('frameprodFunc')
     queue = kargs.pop('queue')
 
-    if 'atoms1' in keys:
+
+    if 'fpointers1' in keys:
+        fpointers1 = kargs.pop('fpointers1')
+        fpointers2 = kargs.pop('fpointers2')
+        atoms1 = [qp.Atoms(fpointer=fpointer1) for fpointer1 in fpointers1]
+
+        chemicalKernelmat = kargs.pop('chemicalKernelmat')
+
+        frames1 = get_Soaps(atoms1,  **kargs)
+        if fpointers2 is not None:
+            atoms2 = [qp.Atoms(fpointer=fpointer2) for fpointer2 in fpointers2]
+            frames2 = get_Soaps(atoms2,  **kargs)
+        else:
+            frames2 = None
+
+        kargs = {'frames1': frames1, 'frames2': frames2, 'chemicalKernelmat': chemicalKernelmat}
+
+    elif 'atoms1' in keys:
         atoms1 = kargs.pop('atoms1')
         atoms2 = kargs.pop('atoms2')
         chemicalKernelmat = kargs.pop('chemicalKernelmat')
@@ -484,7 +507,7 @@ def join_envKernel(results, slices):
 def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                             nthreads=4, nprocess=2, nchunks=2):
+                             nthreads=4, nprocess=2, nchunks=2,islow_memory=False):
     if nocenters is None:
         nocenters = []
 
@@ -500,8 +523,20 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 
     Natoms = len(atoms)
     NenvKernels = Natoms * (Natoms + 1) / 2.
+
+    # fpointers = [frame._fpointer.copy() for frame in atoms]
+    # chunks1d, slices = chunk_list(fpointers, nchunks=nchunks)
     # cut atomsList in chunks
-    chunks1d, slices = chunk_list(atoms, nchunks=nchunks)
+    if islow_memory:
+        frames = get_Soaps(atoms, nprocess=nprocess, nocenters=nocenters, chem_channels=chem_channels,
+                           centerweight=centerweight,
+                           gaussian_width=gaussian_width, cutoff=cutoff,
+                           cutoff_transition_width=cutoff_transition_width,
+                           nmax=nmax, lmax=lmax)
+        chunks1d, slices = chunk_list(frames, nchunks=nchunks)
+
+    else:
+        chunks1d, slices = chunk_list(atoms, nchunks=nchunks)
 
     soap_params = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
                    'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
@@ -512,6 +547,22 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     # create inputs for each block of the global kernel matrix
     chunks = chunks1d_2_chuncks2d(chunks1d, **soap_params)
 
+    # new_atoms1 = {}
+    # new_atoms2 = {}
+    # for it,chunk in enumerate(chunks):
+    #     atoms1 = chunk.pop('atoms1')
+    #     atoms2 = chunk.pop('atoms2')
+    #     # new_atoms1[it] = [qp.Atoms().copy_from(frame) for frame in atoms1]
+    #     new_atoms1[it] = [frame.copy() for frame in atoms1]
+    #     fpointers1 = [frame._fpointer.copy() for frame in new_atoms1[it]]
+    #     if atoms2 is not None:
+    #         # new_atoms2[it] = [qp.Atoms().copy_from(frame) for frame in atoms2]
+    #         new_atoms2[it] = [frame.copy() for frame in atoms2]
+    #         fpointers2 = [frame._fpointer.copy() for frame in new_atoms2[it]]
+    #     else:
+    #         fpointers2 = None
+    #
+    #     chunk.update(**{'fpointers1':fpointers1,'fpointers2':fpointers2})
 
     # get a list of environemental kernels
     pool = mp_framesprod(chunks, nprocess, nthreads, NenvKernels)

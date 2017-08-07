@@ -51,7 +51,7 @@ def get_globalKernel(environmentalKernels,kernel_type='average',zeta=2,gamma=1.,
 def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernel=deltaKernel,
-                             nthreads=4, nprocess=2, nchunks = 2):
+                             nthreads=4, nprocess=2, nchunks = 2,islow_memory=False):
     '''
     Compute the environmental kernels for every atoms (frame) pairs. Wrapper function around several setup.
     
@@ -92,7 +92,8 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
         # get the environmental kernels as a dictionary
         environmentalKernels = get_environmentalKernels_singleprocess(**kargs)
     else:
-        kargs = {'nthreads':nthreads,'nprocess':nprocess, 'nchunks':nchunks}
+        kargs = {'nthreads':nthreads,'nprocess':nprocess,
+                 'nchunks':nchunks,'islow_memory':islow_memory}
         kargs.update(**soap_params)
 
 
@@ -126,6 +127,7 @@ if __name__ == '__main__':
     parser.add_argument("--nocenters", type=str, default="",help="Comma-separated list of atom Z to be ignored as environment centers (e.g. --nocenter 1,2,4)")
     parser.add_argument("-ngk","--normalize-global-kernel", action='store_true', help="Normalize global kernel")
     parser.add_argument("-sek", "--save-env-kernels", action='store_true', help="Save environmental kernels")
+    parser.add_argument("-lm", "--low-memory", action='store_true', help="Computes the soap vectors in each thread when nchunks > 1")
 
     args = parser.parse_args()
 
@@ -149,6 +151,7 @@ if __name__ == '__main__':
     nchunks = args.nchunks
     normalize_global_kernel = args.normalize_global_kernel
     save_env_kernels = args.save_env_kernels
+    islow_memory = args.low_memory
 
     first = args.first if args.first>0 else None
     last = args.last if args.last>0 else None
@@ -175,6 +178,7 @@ if __name__ == '__main__':
     prefix += "-n"+str(nmax)+"-l"+str(lmax)+"-c"+str(cutoff)+\
              "-g"+str(gaussian_width)+ "-cw"+str(centerweight)+ \
              "-cotw" +str(cutoff_transition_width)
+
     fn_env_kernels = prefix+'-env_kernels.pck'
 
     if global_kernel_type == 'average':
@@ -210,7 +214,7 @@ if __name__ == '__main__':
               'a pool of {} workers and {} threads over {} chunks: {}'.format(nprocess, nthreads,
                                                                               nchunks * (nchunks + 1) // 2,
                                                                               s2hms(time.time() - st))
-    environmentalKernels = get_environmentalKernels(
+    environmentalKernels = get_environmentalKernels(islow_memory=islow_memory,
                                 nthreads=nthreads,nprocess=nprocess, nchunks=nchunks,
                                 **soap_params)
 

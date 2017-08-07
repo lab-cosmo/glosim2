@@ -27,7 +27,7 @@ def get_spkitMax(atoms):
 
     for at in atoms:
         atspecies = {}
-        for z in at.z:
+        for z in at.get_atomic_numbers():
             if z in atspecies:
                 atspecies[z] += 1
             else:
@@ -49,7 +49,7 @@ def get_spkit(atom):
     :return:
     '''
     spkit = {}
-    for z in atom.z:
+    for z in atom.get_atomic_numbers():
         if z in spkit:
             spkit[z] += 1
         else:
@@ -172,8 +172,11 @@ def chunk_list(lll, nchunks):
 
 
 def chunks1d_2_chuncks2d(chunk_1d, **kargs):
+
     if isinstance(chunk_1d[0], qp.io.AtomsList):
         key = ['atoms1', 'atoms2']
+    # elif isinstance(chunk_1d[0],list):
+    #     key = ['fpointer1', 'fpointer2']
     else:
         key = ['frames1', 'frames2']
     chunks = []
