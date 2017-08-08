@@ -131,7 +131,7 @@ if __name__ == '__main__':
     outpath = path
 
     suffix = 0
-    while os.path.exists(path+name+'_tmp{}'.format(suffix)):
+    while os.path.exists(path+name+params+'_tmp{}'.format(suffix)):
         suffix += 1
     tmp_path = path+name+ params +'_tmp{}/'.format(suffix)
     print 'TMP output is in ' + tmp_path
@@ -143,14 +143,14 @@ if __name__ == '__main__':
                       +params + '-env_kernels.pck'
                       for xsl in xslices for ysl in yslices  if ysl[0] >= xsl[0]]
 
-
-    commands = ['python GlobalSimilarity_cluster.py {filename} ' \
+    path2GlobSim = os.path.abspath('GlobalSimilarity_cluster.py')
+    commands = ['python {path2exec} {filename} ' \
                 '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' \
                 '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} -k {kernel} ' \
                 '-nt {nthreads} -np {nprocess} -nc 1 --xlim {xf},{xl} --ylim {yf},{yl}  ' \
                 '--prefix {prefix}{name}-{xf},{xl}-{yf},{yl} -sek ' \
                 '2>&1 | tee {prefix}log-{xf},{xl}-{yf},{yl} >/dev/null'
-                .format(filename=filename,nmax=nmax,lmax=lmax,cutoff=cutoff,
+                .format(path2exec=path2GlobSim,filename=filename,nmax=nmax,lmax=lmax,cutoff=cutoff,
                         gaussian_width=gaussian_width,centerweight=centerweight,
                         cutoff_transition_width=cutoff_transition_width,
                         zeta=zeta,gamma=gamma,kernel=global_kernel_type,
