@@ -80,11 +80,6 @@ if __name__ == '__main__':
     nocenters = sorted(list(set(nocenters)))
 
     ###### Start the app ######
-    print "Start dirty parallelisation for cluster: {}".format(ctime())
-    print "Start Computing the global {} kernel of {}".format(global_kernel_type,filename)
-    # run commands in parallel
-    st = time()
-
     pool = MPIPool()
 
     if not pool.is_master():
@@ -92,6 +87,10 @@ if __name__ == '__main__':
         pool.wait()
         sys.exit(0)
 
+    print "Start dirty parallelisation for cluster: {}".format(ctime())
+    print "Start Computing the global {} kernel of {}".format(global_kernel_type, filename)
+    # run commands in parallel
+    st = time()
 
     frames = qp.AtomsList(filename,start=first,stop=last)
     Nframe = len(frames)
@@ -174,4 +173,4 @@ if __name__ == '__main__':
     np.savetxt(fn,globalKernel)
 
     print 'Finished in: {}'.format(s2hms(time()-st))
-    print 'Closing  in: {}'.format(ctime())
+    print 'Closing app: {}'.format(ctime())

@@ -169,13 +169,15 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
         class dummy_queue(object):
             def __init__(self,Niter):
                 super(dummy_queue,self).__init__()
-                self.tbar = tqdm_cs(total=int(Niter), ascii=False)
+                self.tbar = tqdm_cs(total=int(Niter), ascii=True)
             def put(self,ii):
                 self.tbar.update(ii)
             def __del__(self):
                 self.tbar.close()
-
-        Niter = len(frames1)*(len(frames1)+1)/2
+        if frames2 is None:
+            Niter = len(frames1)*(len(frames1)+1)/2
+        else:
+            Niter = len(frames1)*len(frames1)
         queue = dummy_queue(Niter)
         disable_pbar = False
 
