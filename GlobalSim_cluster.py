@@ -45,7 +45,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-
 ###### Reads parameters input ######
     filename = args.filename[0]
     prefix = args.prefix
@@ -68,6 +67,8 @@ if __name__ == '__main__':
 
     first = args.first if args.first>0 else None
     last = args.last if args.last>0 else None
+
+    path_to_executable = args.path_to_executable
 
     if args.outformat in ['text','pickle']:
         outformat = args.outformat
@@ -145,7 +146,7 @@ if __name__ == '__main__':
                       +params + '-env_kernels.pck'
                       for xsl in xslices for ysl in yslices  if ysl[0] >= xsl[0]]
 
-    path2GlobSim = 'GlobalSimilarity_cluster.py'
+    path2GlobSim = path_to_executable+'GlobalSimilarity_cluster.py'
     commands = ['python {path2exec} {filename} ' \
                 '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' \
                 '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} -k {kernel} ' \
