@@ -126,7 +126,7 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
                  'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
                  'nmax': nmax, 'lmax': lmax} for frame in atoms]
 
-            pool = mp.Pool(nprocess, maxtasksperchild=1)
+            pool = mp.Pool(nprocess, maxtasksperchild=10)
 
             Frames = pool.map(get_alchemy_frame_wrapper, soapParams)
             pool.close()

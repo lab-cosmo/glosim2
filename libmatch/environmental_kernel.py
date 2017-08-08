@@ -62,6 +62,48 @@ try:
 
                 result[it, jt] = EnvironmentalSimilarity
 
+
+    @nb.jit(signatureEnv, nopython=True, nogil=True, cache=True)
+    def nb_frameprod_upper_delta(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
+
+        Nenv1, nA, nL = vals1.shape
+        Nenv2, nB, nL = vals2.shape
+
+        mm = np.zeros((nA,), np.int32)
+        union = np.zeros((nA, 2), np.int32)
+        for it in range(nA):
+            isUnion = False
+            for jt in range(nB):
+                if keys1[it][0] == keys2[jt][0] and keys1[it][1] == keys2[jt][1]:
+                    mm[it] = jt
+                    isUnion = True
+                    continue
+
+            if isUnion is True:
+                union[it][0] = keys1[it][0]
+                union[it][1] = keys1[it][1]
+
+        for it in range(Nenv1):
+            for jt in range(Nenv2):
+                EnvironmentalSimilarity = 0.
+
+                for nt in range(nA):
+
+                    if union[nt, 0] == 0 and union[nt, 1] == 0:
+                        continue
+
+                    pp = 0.
+                    for kt in range(nL):
+                        pp += vals1[it, nt, kt] * vals2[jt, mm[nt], kt]
+
+                    if union[nt, 0] == union[nt, 1]:
+                        EnvironmentalSimilarity += pp
+                    else:
+                        EnvironmentalSimilarity += pp * 2
+
+
+                result[it, jt] = EnvironmentalSimilarity
+
 except:
     nonumba = True
 
@@ -127,7 +169,7 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
         class dummy_queue(object):
             def __init__(self,Niter):
                 super(dummy_queue,self).__init__()
-                self.tbar = tqdm_cs(total=int(Niter), ascii=True)
+                self.tbar = tqdm_cs(total=int(Niter), ascii=False)
             def put(self,ii):
                 self.tbar.update(ii)
             def __del__(self):
@@ -153,7 +195,7 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
         frames2 = frames1
         for it, frame1 in enumerate(frames1):
             keys1, vals1 = frame1.get_arrays()
-            ii = 0
+            # ii = 0
             for jt, frame2 in enumerate(frames2):
                 if it > jt:
                     continue
@@ -161,21 +203,21 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
                          'chemicalKernelmat': chemicalKernelmat}
                 envkernels[(it, jt)] = frameprodFunc(**kargs)
-                ii += 1
+                # ii += 1
 
-            queue.put(ii)
+                queue.put(1)
     else:
 
         for it, frame1 in enumerate(frames1):
             keys1, vals1 = frame1.get_arrays()
-            ii = 0
+            # ii = 0
             for jt, frame2 in enumerate(frames2):
                 keys2, vals2 = frame2.get_arrays()
                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
                          'chemicalKernelmat': chemicalKernelmat}
                 envkernels[(it, jt)] = frameprodFunc(**kargs)
-                ii += 1
-            queue.put(ii)
+                # ii += 1
+                queue.put(1)
     return envkernels
 
     # if frames2 is None:
@@ -255,6 +297,48 @@ def nb_frameprod_upper_singlethread(**kargs):
     nb_frameprod_upper(result, **kargs)
     return result
 
+def nb_frameprod_upper_delta_singlethread(**kargs):
+    Nenv1, nA, nL = kargs['vals1'].shape
+    Nenv2, nB, nL = kargs['vals2'].shape
+
+    result = np.empty((Nenv1, Nenv2), dtype=np.float64)
+    nb_frameprod_upper_delta(result, **kargs)
+    return result
+
+def nb_frameprod_upper_delta_multithread(**kargs):
+    Nenv1, nA, nL = kargs['vals1'].shape
+    Nenv2, nB, nL = kargs['vals2'].shape
+    result = np.zeros((Nenv1, Nenv2), dtype=np.float64)
+
+    keys1, keys2, vals1, vals2, chemicalKernelmat = [kargs['keys1'], kargs['keys2'], kargs['vals1'], kargs['vals2'], \
+                                                     kargs['chemicalKernelmat']]
+
+    numthreadsTot2nthreads = {2: (2, 1), 4: (2, 2), 6: (3, 2), 9: (3, 3),
+                              12: (4, 3), 16: (4, 4), 25: (5, 5), 36: (6, 6),
+                              48: (7, 7), 64: (8,8), 81: (9,9), 100: (10,10)}
+    numthreads1, numthreads2 = numthreadsTot2nthreads[4]
+
+    chunks1, slices1 = chunk_list(vals1, numthreads1)
+    chunks2, slices2 = chunk_list(vals2, numthreads2)
+
+    chunks = []
+    for it in range(numthreads1):
+        for jt in range(numthreads2):
+            chunks3 = result[slices1[it][0]:slices1[it][-1] + 1, slices2[jt][0]:slices2[jt][-1] + 1]
+            a = {'result': chunks3, 'chemicalKernelmat': chemicalKernelmat.copy(), 'keys1': keys1.copy(), 'keys2': keys2.copy()}
+            a.update(**{'vals1': chunks1[it]})
+            a.update(**{'vals2': chunks2[jt]})
+
+            chunks.append(a)
+
+    threads = [threading.Thread(target=nb_frameprod_upper_delta, kwargs=chunk) for chunk in chunks]
+
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return result
+
 def np_frameprod_upper(keys1, vals1, keys2, vals2, chemicalKernelmat):
     '''
     Computes the environmental matrix between two AlchemyFrame. Simplest implementation, very slow.
@@ -331,10 +415,11 @@ def np_frameprod3_upper(keys1, vals1, keys2, vals2, chemicalKernelmat):
     return k
 
 
-def choose_envKernel_func(nthreads=4):
+def choose_envKernel_func(nthreads=4, isDeltaKernel=False):
     '''
     Compile with numba the nb_frameprod_upper function.
 
+    :param isDeltaKernel: 
     :param nthreads: int. Number of threads each of which computes a block of the environmental matrix
     :return: Compiled inner_func_nbupper function with threads
     '''
@@ -346,10 +431,19 @@ def choose_envKernel_func(nthreads=4):
 
         if nthreads == 1:
             print('1 threaded calc')
-            get_envKernel = nb_frameprod_upper_singlethread
+            if isDeltaKernel:
+                print 'with implicit delta kernel function'
+                get_envKernel = nb_frameprod_upper_delta_singlethread
+            else:
+                print 'with explicit delta kernel function'
+                get_envKernel = nb_frameprod_upper_singlethread
         elif nthreads in [2,4,6,9,12,16,25,36,48,64,81,100]:
             print('{:.0f} threaded calc'.format(nthreads))
-            get_envKernel = nb_frameprod_upper_multithread
+            if isDeltaKernel:
+                print 'with implicit delta kernel function'
+                get_envKernel = nb_frameprod_upper_delta_multithread
+            else:
+                get_envKernel = nb_frameprod_upper_multithread
         else:
             print('Unsuported nthreads number\n 1 threaded calc')
             get_envKernel = nb_frameprod_upper_singlethread
@@ -417,11 +511,11 @@ def framesprod_wrapper(kargs):
 #         return results
 
 class mp_framesprod(object):
-    def __init__(self, chunks, nprocess, nthreads, Niter):
+    def __init__(self, chunks, nprocess, nthreads, Niter,isDeltaKernel):
         super(mp_framesprod, self).__init__()
         self.func = framesprod_wrapper
         self.parent_id = os.getpid()
-        self.get_envKernel = choose_envKernel_func(nthreads)
+        self.get_envKernel = choose_envKernel_func(nthreads,isDeltaKernel)
 
         self.nprocess = nprocess
         self.nthreads = nthreads
@@ -509,7 +603,7 @@ def join_envKernel(results, slices):
 def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                             nthreads=4, nprocess=2, nchunks=2,islow_memory=False):
+                             nthreads=4, nprocess=2, nchunks=2,islow_memory=False,isDeltaKernel=True):
     if nocenters is None:
         nocenters = []
 
@@ -567,7 +661,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     #     chunk.update(**{'fpointers1':fpointers1,'fpointers2':fpointers2})
 
     # get a list of environemental kernels
-    pool = mp_framesprod(chunks, nprocess, nthreads, NenvKernels)
+    pool = mp_framesprod(chunks, nprocess, nthreads, NenvKernels,isDeltaKernel=isDeltaKernel)
     results = pool.run()
     # reorder the list of environemental kernels into a dictionary which keys are the (i,j) of the global kernel matrix
     environmentalKernels = join_envKernel(results, slices)
@@ -578,12 +672,12 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                                            gaussian_width=0.5, cutoff=3.5, cutoff_transition_width=0.5,
                                            nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                                           nthreads=4, nprocess=0, nchunks=0):
+                                           nthreads=4, nprocess=0, nchunks=0,isDeltaKernel=True):
     if nocenters is None:
         nocenters = []
 
     # Chooses the function to use to compute the kernel between two frames
-    get_envKernel = choose_envKernel_func(nthreads)
+    get_envKernel = choose_envKernel_func(nthreads,isDeltaKernel)
 
     # Builds the kernel matrix from the species present in the frames and a specified chemical
     # kernel function

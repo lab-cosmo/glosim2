@@ -11,11 +11,14 @@ def deltaKernel(spA ,spB):
     else:
         return 0.
 
-def Atoms2ChemicalKernelmat(atoms,chemicalKernel=deltaKernel):
+def Atoms2ChemicalKernelmat(atoms,atoms2=None,chemicalKernel=deltaKernel):
     # unique sp in frames 1 and 2
     uk1 = []
     for frame in atoms:
         uk1.extend(frame.get_atomic_numbers())
+    if atoms2 is not None:
+        for frame in atoms2:
+            uk1.extend(frame.get_atomic_numbers())
     uk1 = list(set(uk1))
     Nsp1 = max(uk1)+1
     # 0 row and col are here but dont matter

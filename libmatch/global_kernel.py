@@ -23,6 +23,7 @@ def avgKernel(envKernelDict,zeta):
     N = rows.max() + 1
     M = cols.max() + 1
     Similarity = np.zeros((N,M),dtype=np.float64)
+
     for key,envKernel in envKernelDict.iteritems():
         Similarity[key[0],key[1]] = np.power(envKernel,zeta).mean()
     diag = np.diag(Similarity)
@@ -43,8 +44,8 @@ def rematchKernel(envKernelDict, gamma=2., eps=1e-6, nthreads=8):
     envKernels = envKernelDict.values()
     rows = np.array([key[0] for key in keys])
     cols = np.array([key[1] for key in keys])
-    N = rows.max() + 1
-    M = cols.max() + 1
+    N = int(rows.max() + 1)
+    M = int(cols.max() + 1)
     globalSimilarity = np.zeros((N, M), dtype=np.float64)
 
     if nonumba:
