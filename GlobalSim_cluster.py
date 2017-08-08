@@ -115,6 +115,10 @@ if __name__ == '__main__':
     xslices.append(((xNchunk)*xchunklen,Nframe))
     yslices.append(((yNchunk)*ychunklen,Nframe))
 
+    params = "-n" + str(nmax) + "-l" + str(lmax) + "-c" + str(cutoff) + \
+             "-g" + str(gaussian_width) + "-cw" + str(centerweight) + \
+             "-cotw" + str(cutoff_transition_width)
+
     if prefix:
         abspath = os.path.abspath(prefix)
     else:
@@ -129,13 +133,11 @@ if __name__ == '__main__':
     suffix = 0
     while os.path.exists(path+name+'_tmp{}'.format(suffix)):
         suffix += 1
-    tmp_path = path+name +'_tmp{}/'.format(suffix)
+    tmp_path = path+name+ params +'_tmp{}/'.format(suffix)
     print 'TMP output is in ' + tmp_path
     os.makedirs(tmp_path)
 
-    params = "-n" + str(nmax) + "-l" + str(lmax) + "-c" + str(cutoff) + \
-                  "-g" + str(gaussian_width) + "-cw" + str(centerweight) + \
-                  "-cotw" + str(cutoff_transition_width)
+
 
     fn_env_kernels = [tmp_path+name+'-{xf},{xl}-{yf},{yl}'.format(xf=xsl[0],xl=xsl[1],yf=ysl[0],yl=ysl[1])
                       +params + '-env_kernels.pck'
