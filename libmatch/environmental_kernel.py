@@ -177,7 +177,7 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
         if frames2 is None:
             Niter = len(frames1)*(len(frames1)+1)/2
         else:
-            Niter = len(frames1)*len(frames1)
+            Niter = len(frames1)*len(frames2)
         queue = dummy_queue(Niter)
         disable_pbar = False
 

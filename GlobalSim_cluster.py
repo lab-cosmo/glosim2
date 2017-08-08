@@ -115,14 +115,29 @@ if __name__ == '__main__':
     xslices.append(((xNchunk)*xchunklen,Nframe))
     yslices.append(((yNchunk)*ychunklen,Nframe))
 
+    if prefix:
+        abspath = os.path.abspath(prefix)
+    else:
+        abspath = os.path.abspath(filename)
+    path,name = os.path.split(abspath)
 
-    pp = 'test/subprocess/'
-    name = 'gdb9'
+    if name.endswith('.xyz'):
+        name = name[:-4]
+    path += '/'
+    outpath = path
+
+    suffix = 0
+    while os.path.exists(path+name+'_tmp{}'.format(suffix)):
+        suffix += 1
+    tmp_path = path+name +'_tmp{}/'.format(suffix)
+    print 'TMP output is in ' + tmp_path
+    os.makedirs(tmp_path)
+
     params = "-n" + str(nmax) + "-l" + str(lmax) + "-c" + str(cutoff) + \
                   "-g" + str(gaussian_width) + "-cw" + str(centerweight) + \
                   "-cotw" + str(cutoff_transition_width)
 
-    fn_env_kernels = [pp+name+'-{xf},{xl}-{yf},{yl}'.format(xf=xsl[0],xl=xsl[1],yf=ysl[0],yl=ysl[1])
+    fn_env_kernels = [tmp_path+name+'-{xf},{xl}-{yf},{yl}'.format(xf=xsl[0],xl=xsl[1],yf=ysl[0],yl=ysl[1])
                       +params + '-env_kernels.pck'
                       for xsl in xslices for ysl in yslices  if ysl[0] >= xsl[0]]
 
@@ -139,16 +154,13 @@ if __name__ == '__main__':
                         zeta=zeta,gamma=gamma,kernel=global_kernel_type,
                         nthreads=nthreads,nprocess=nprocess,
                         xf=xsl[0], xl=xsl[1], yf=ysl[0], yl=ysl[1],
-                        prefix=pp,name=name)
+                        prefix=tmp_path,name=name)
                 for xsl in xslices for ysl in yslices if ysl[0] >= xsl[0]
                 ]
-
-
 
     pool.map(func,commands)
 
     pool.close()
-
 
     env_kernels = {}
     for fn in fn_env_kernels:
@@ -168,8 +180,14 @@ if __name__ == '__main__':
 
     globalKernel = get_globalKernel(env_kernels,kernel_type=global_kernel_type,zeta=zeta,nthreads=1)
 
-    fn = pp + name + params + gkt + norm + '.k'
+    fn = outpath + name + params + '-env_kernels.pck'
+    print 'Saving env kernels in ' + fn
+    with open(fn, 'wb') as f:
+        pck.dump(env_kernels,f,protocol=pck.HIGHEST_PROTOCOL)
 
+
+    fn = outpath + name + params + gkt + norm + '.k'
+    print 'Saving global kernel in ' + fn
     np.savetxt(fn,globalKernel)
 
     print 'Finished in: {}'.format(s2hms(time()-st))
