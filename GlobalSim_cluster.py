@@ -20,6 +20,8 @@ if __name__ == '__main__':
     mpiexec -n 4 python """)
 
     parser.add_argument("filename", nargs=1, help="Name of the LibAtom formatted xyz input file")
+    parser.add_argument("-pe", "--path-to-executable", type=str, default="/home/musil/git/glosim2/",
+                        help="Path to the executable that runs, i.e. GlobalSimilarity_cluster.py")
     parser.add_argument("-n", type=int, default=8, help="Number of radial functions for the descriptor")
     parser.add_argument("-l", type=int, default=6, help="Maximum number of angular functions for the descriptor")
     parser.add_argument("-c", type=float, default=3.5, help="Radial cutoff")
@@ -143,7 +145,7 @@ if __name__ == '__main__':
                       +params + '-env_kernels.pck'
                       for xsl in xslices for ysl in yslices  if ysl[0] >= xsl[0]]
 
-    path2GlobSim = os.path.abspath('GlobalSimilarity_cluster.py')
+    path2GlobSim = 'GlobalSimilarity_cluster.py'
     commands = ['python {path2exec} {filename} ' \
                 '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' \
                 '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} -k {kernel} ' \
