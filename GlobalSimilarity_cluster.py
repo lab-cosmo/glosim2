@@ -32,7 +32,7 @@ except:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="""Computes the Global average/rematch kernel.""")
+    parser = argparse.ArgumentParser(description="""Computes the Environmental SOAP kernels.""")
 
     parser.add_argument("filename", nargs=1, help="Name of the LibAtom formatted xyz input file")
     parser.add_argument("-n", type=int, default=8, help="Number of radial functions for the descriptor")
@@ -41,8 +41,6 @@ if __name__ == '__main__':
     parser.add_argument("-cotw", type=float, default=0.5, help="Cutoff transition width")
     parser.add_argument("-g", type=float, default=0.5, help="Atom Gaussian sigma")
     parser.add_argument("-cw", type=float, default=1.0, help="Center atom weight")
-    parser.add_argument("-k", "--kernel", type=str, default="average",
-                        help="Global kernel mode (e.g. --kernel average / rematch ")
     parser.add_argument("-gm", "--gamma", type=float, default=1.0,
                         help="Regularization for entropy-smoothed best-match kernel")
     parser.add_argument("-z", "--zeta", type=int, default=2, help="Power for the environmental matrix")
@@ -57,7 +55,6 @@ if __name__ == '__main__':
                         help="Number of chunks to divide the global kernel matrix in.")
     parser.add_argument("--nocenters", type=str, default="",
                         help="Comma-separated list of atom Z to be ignored as environment centers (e.g. --nocenter 1,2,4)")
-    parser.add_argument("-ngk", "--normalize-global-kernel", action='store_true', help="Normalize global kernel")
     parser.add_argument("-sek", "--save-env-kernels", action='store_true', help="Save environmental kernels")
     parser.add_argument("-lm", "--low-memory", action='store_true',
                         help="Computes the soap vectors in each thread when nchunks > 1")
@@ -74,14 +71,12 @@ if __name__ == '__main__':
     nmax = args.n
     lmax = args.l
 
-    global_kernel_type = args.kernel
     zeta = args.zeta
     gamma = args.gamma
 
     nthreads = args.nthreads
     nprocess = args.nprocess
     nchunks = args.nchunks
-    normalize_global_kernel = args.normalize_global_kernel
     save_env_kernels = args.save_env_kernels
     islow_memory = args.low_memory
 

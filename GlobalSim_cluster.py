@@ -1,6 +1,6 @@
 from subprocess import Popen
 from time import time,ctime
-from libmatch.utils import s2hms
+from libmatch.utils import s2hms,print_logo
 import cPickle as pck
 from GlobalSimilarity import get_globalKernel
 import numpy as np
@@ -17,7 +17,7 @@ def func(command):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Computes the Global average/rematch kernel. Needs MPI to run, 
-    mpiexec -n 4 python """)
+    mpiexec -n 4 python  """)
 
     parser.add_argument("filename", nargs=1, help="Name of the LibAtom formatted xyz input file")
     parser.add_argument("-pe", "--path-to-executable", type=str, default="/home/musil/git/glosim2/",
@@ -28,11 +28,11 @@ if __name__ == '__main__':
     parser.add_argument("-cotw", type=float, default=0.5, help="Cutoff transition width")
     parser.add_argument("-g", type=float, default=0.5, help="Atom Gaussian sigma")
     parser.add_argument("-cw", type=float, default=1.0, help="Center atom weight")
-    parser.add_argument("-k","--kernel", type=str, default="average",
-                        help="Global kernel mode (e.g. --kernel average / rematch ")
-    parser.add_argument("-gm","--gamma", type=float, default=1.0,
+    # parser.add_argument("-k","--kernel", type=str, default="average",
+    #                     help="Global kernel mode (e.g. --kernel average / rematch ")
+    parser.add_argument("-gm","--gamma", type=str, default='2',
                         help="Regularization for entropy-smoothed best-match kernel")
-    parser.add_argument("-z", "--zeta", type=int, default=2, help="Power for the environmental matrix")
+    parser.add_argument("-z", "--zeta", type=str, default='2', help="Power for the environmental matrix")
     parser.add_argument("--prefix", type=str, default='', help="Prefix for output files (defaults to input file name)")
     parser.add_argument("--first", type=int, default='0', help="Index of first frame to be read in")
     parser.add_argument("--last", type=int, default='0', help="Index of last frame to be read in")
@@ -45,6 +45,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    print_logo()
+
 ###### Reads parameters input ######
     filename = args.filename[0]
     prefix = args.prefix
@@ -55,9 +57,15 @@ if __name__ == '__main__':
     nmax = args.n
     lmax = args.l
 
-    global_kernel_type = args.kernel
-    zeta = args.zeta
-    gamma = args.gamma
+    # global_kernel_type = args.kernel
+    # zeta = args.zeta
+    # gamma = args.gamma
+    try:
+        zetas = [int(zeta) for zeta in args.zeta.split(',')]
+        gammas = [float(gamma) for gamma in args.gamma.split(',')]
+    except:
+        raise ValueError('zeta and gamma must be coma separated int or float respectively')
+    global_kernel_type = {'average':zetas,'rematch':gammas}
 
     nthreads = args.nthreads
     nprocess = args.nprocess
@@ -90,8 +98,12 @@ if __name__ == '__main__':
         pool.wait()
         sys.exit(0)
 
-    print "Start dirty parallelisation for cluster: {}".format(ctime())
-    print "Start Computing the global {} kernel of {}".format(global_kernel_type, filename)
+    print "Start dirty parallelisation for cluster " \
+          "with a pool of {} mpi processes: {}".format(pool.size,ctime())
+
+    print "Computing the global {} kernel of {} " \
+      "from index {} to {} (None -> default, i.e. begining/end)".format(global_kernel_type, filename,first,last)
+
     # run commands in parallel
     st = time()
 
@@ -149,14 +161,14 @@ if __name__ == '__main__':
     path2GlobSim = path_to_executable+'GlobalSimilarity_cluster.py'
     commands = ['python {path2exec} {filename} ' \
                 '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' \
-                '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} -k {kernel} ' \
+                '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} ' \
                 '-nt {nthreads} -np {nprocess} -nc 1 --xlim {xf},{xl} --ylim {yf},{yl}  ' \
                 '--prefix {prefix}{name}-{xf},{xl}-{yf},{yl} -sek ' \
                 '2>&1 | tee {prefix}log-{xf},{xl}-{yf},{yl} >/dev/null'
                 .format(path2exec=path2GlobSim,filename=filename,nmax=nmax,lmax=lmax,cutoff=cutoff,
                         gaussian_width=gaussian_width,centerweight=centerweight,
                         cutoff_transition_width=cutoff_transition_width,
-                        zeta=zeta,gamma=gamma,kernel=global_kernel_type,
+                        zeta=zeta,gamma=gamma,
                         nthreads=nthreads,nprocess=nprocess,
                         xf=xsl[0], xl=xsl[1], yf=ysl[0], yl=ysl[1],
                         prefix=tmp_path,name=name)
@@ -173,27 +185,41 @@ if __name__ == '__main__':
             aa = pck.load(f)
             env_kernels.update(**aa)
 
-    gkt = ''
-    norm = ''
-    if global_kernel_type == 'average':
-        gkt = '-average-zeta{:.0f}'.format(zeta)
-    elif global_kernel_type == 'rematch':
-        gkt = '-rematch-gamma{:.2f}'.format(gamma)
-    else:
-        raise ValueError
-    if not normalize_global_kernel: norm = "-nonorm"
-
-    globalKernel = get_globalKernel(env_kernels,kernel_type=global_kernel_type,zeta=zeta,nthreads=1)
-
     fn = outpath + name + params + '-env_kernels.pck'
     print 'Saving env kernels in ' + fn
     with open(fn, 'wb') as f:
-        pck.dump(env_kernels,f,protocol=pck.HIGHEST_PROTOCOL)
+        pck.dump(env_kernels, f, protocol=pck.HIGHEST_PROTOCOL)
+
+    if not normalize_global_kernel:
+        norm = "-nonorm"
+    else:
+        norm = ''
+
+    for kernel_name,params in global_kernel_type.iteritems():
+        for param in params:
+
+            if kernel_name == 'average':
+                gkt = '-average-zeta{:.0f}'.format(param)
+                globalKernel = get_globalKernel(env_kernels, kernel_type=kernel_name, zeta=param, nthreads=1)
+                fn = outpath + name + params + gkt + norm + '.k'
+                print 'Saving global kernel in ' + fn
+                np.savetxt(fn, globalKernel)
+
+            elif kernel_name == 'rematch':
+                gkt = '-rematch-gamma{:.2f}'.format(param)
+                globalKernel = get_globalKernel(env_kernels, kernel_type=kernel_name, gamma=param, nthreads=8)
+                fn = outpath + name + params + gkt + norm + '.k'
+                print 'Saving global kernel in ' + fn
+                np.savetxt(fn, globalKernel)
+            else:
+                raise ValueError
 
 
-    fn = outpath + name + params + gkt + norm + '.k'
-    print 'Saving global kernel in ' + fn
-    np.savetxt(fn,globalKernel)
+
+
+
+
+
 
     print 'Finished in: {}'.format(s2hms(time()-st))
     print 'Closing app: {}'.format(ctime())

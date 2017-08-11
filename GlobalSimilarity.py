@@ -10,7 +10,7 @@ from libmatch.chemical_kernel import Atoms2ChemicalKernelmat, deltaKernel
 from libmatch.environmental_kernel import get_environmentalKernels_mt_mp_chunks, \
     get_environmentalKernels_singleprocess
 from libmatch.global_kernel import avgKernel, rematchKernel, normalizeKernel
-from libmatch.utils import s2hms
+from libmatch.utils import s2hms,print_logo
 
 try:
     import numba as nb
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-
+    print_logo()
 ###### Reads parameters input ######
     filename = args.filename[0]
     prefix = args.prefix
