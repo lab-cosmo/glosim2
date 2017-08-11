@@ -128,13 +128,14 @@ if __name__ == '__main__':
     ################################################################################
     # Reads the file and create a list of quippy frames object
     atoms1 = qp.AtomsList(filename, start=xlim[0], stop=xlim[1])
-    print 'Reading {} input atomic structure from {}: done {}'.format(len(atoms1), filename, s2hms(time.time() - st))
+    print 'Reading {} input atomic structure from {} with index {}: done {}'.format(len(atoms1), filename,xlim, s2hms(time.time() - st))
 
     if xlim != ylim:
         atoms2 = qp.AtomsList(filename, start=ylim[0], stop=ylim[1])
-        print 'Reading {} input atomic structure from {}: done {}'.format(len(atoms2), filename, s2hms(time.time() - st))
+        print 'Reading {} input atomic structure from {} with index {}: done {}'.format(len(atoms2), filename,ylim, s2hms(time.time() - st))
     else:
         atoms2 = None
+        print 'no atoms 2, Computing upper triangular sub matrix'
     soap_params = {
         'centerweight': centerweight, 'gaussian_width': gaussian_width,
         'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
@@ -150,17 +151,18 @@ if __name__ == '__main__':
     # get the soap for every local environement
     frames1 = get_Soaps(atoms1, nprocess=nprocess,**soap_params )
 
-    print 'Compute xSoap {} from {}: done {}'.format(xlim, filename, s2hms(time.time() - st))
+    print 'Compute xSoap {} with {} process from {}: done {}'.format(xlim,nprocess, filename, s2hms(time.time() - st))
     if atoms2 is None:
         frames2 = None
+        print 'no atoms 2, Computing upper triangular sub matrix'
     else:
         frames2 = get_Soaps(atoms2, nprocess=nprocess, **soap_params )
-        print 'Compute ySoap {} from {}: done {}'.format(ylim, filename, s2hms(time.time() - st))
+        print 'Compute ySoap {} process from {}: done {}'.format(ylim,nprocess, filename, s2hms(time.time() - st))
 
     ########################################################################################
     # get the environmental kernels as a dictionary
 
-    print 'Compute soap and environmental kernels with {} : start {}'.format(nthreads, s2hms(time.time() - st))
+    print 'Compute soap and environmental kernels with {} threads: start {}'.format(nthreads, s2hms(time.time() - st))
     environmentalKernels = framesprod(frames1, frames2=frames2, frameprodFunc=get_envKernel,
                                       chemicalKernelmat=chemicalKernelmat)
 
