@@ -130,7 +130,7 @@ if __name__ == '__main__':
     xslices.append(((xNchunk)*xchunklen,Nframe))
     yslices.append(((yNchunk)*ychunklen,Nframe))
 
-    params = "-n" + str(nmax) + "-l" + str(lmax) + "-c" + str(cutoff) + \
+    soap_params = "-n" + str(nmax) + "-l" + str(lmax) + "-c" + str(cutoff) + \
              "-g" + str(gaussian_width) + "-cw" + str(centerweight) + \
              "-cotw" + str(cutoff_transition_width)
 
@@ -146,16 +146,16 @@ if __name__ == '__main__':
     outpath = path
 
     suffix = 0
-    while os.path.exists(path+name+params+'_tmp{}'.format(suffix)):
+    while os.path.exists(path+name+soap_params+'_tmp{}'.format(suffix)):
         suffix += 1
-    tmp_path = path+name+ params +'_tmp{}/'.format(suffix)
+    tmp_path = path+name+ soap_params +'_tmp{}/'.format(suffix)
     print 'TMP output is in ' + tmp_path
     os.makedirs(tmp_path)
 
 
 
     fn_env_kernels = [tmp_path+name+'-{xf},{xl}-{yf},{yl}'.format(xf=xsl[0],xl=xsl[1],yf=ysl[0],yl=ysl[1])
-                      +params + '-env_kernels.pck'
+                      +soap_params + '-env_kernels.pck'
                       for xsl in xslices for ysl in yslices  if ysl[0] >= xsl[0]]
 
     path2GlobSim = path_to_executable+'GlobalSimilarity_cluster.py'
@@ -185,7 +185,7 @@ if __name__ == '__main__':
             aa = pck.load(f)
             env_kernels.update(**aa)
 
-    fn = outpath + name + params + '-env_kernels.pck'
+    fn = outpath + name + soap_params + '-env_kernels.pck'
     print 'Saving env kernels in ' + fn
     with open(fn, 'wb') as f:
         pck.dump(env_kernels, f, protocol=pck.HIGHEST_PROTOCOL)
@@ -201,25 +201,18 @@ if __name__ == '__main__':
             if kernel_name == 'average':
                 gkt = '-average-zeta{:.0f}'.format(param)
                 globalKernel = get_globalKernel(env_kernels, kernel_type=kernel_name, zeta=param, nthreads=1)
-                fn = outpath + name + params + gkt + norm + '.k'
+                fn = outpath + name + soap_params + gkt + norm + '.k'
                 print 'Saving global kernel in ' + fn
                 np.savetxt(fn, globalKernel)
 
             elif kernel_name == 'rematch':
                 gkt = '-rematch-gamma{:.2f}'.format(param)
                 globalKernel = get_globalKernel(env_kernels, kernel_type=kernel_name, gamma=param, nthreads=8)
-                fn = outpath + name + params + gkt + norm + '.k'
+                fn = outpath + name + soap_params + gkt + norm + '.k'
                 print 'Saving global kernel in ' + fn
                 np.savetxt(fn, globalKernel)
             else:
                 raise ValueError
-
-
-
-
-
-
-
 
     print 'Finished in: {}'.format(s2hms(time()-st))
     print 'Closing app: {}'.format(ctime())
