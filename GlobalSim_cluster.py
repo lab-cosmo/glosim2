@@ -45,7 +45,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print_logo()
 
 ###### Reads parameters input ######
     filename = args.filename[0]
@@ -97,6 +96,8 @@ if __name__ == '__main__':
         # Wait for instructions from the master process.
         pool.wait()
         sys.exit(0)
+
+    print_logo()
 
     print "Start dirty parallelisation for cluster " \
           "with a pool of {} mpi processes: {}".format(pool.size,ctime())
