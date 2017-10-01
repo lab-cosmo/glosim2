@@ -115,7 +115,7 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
                 Frames.append(alchemyFrame)
             # output rawSoaps
             else:
-                raise NotImplementedError()
+                # raise NotImplementedError()
                 Frames.append(rawsoaps)
     elif nprocess > 1:
         if chem_channels:
