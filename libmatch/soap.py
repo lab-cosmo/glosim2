@@ -11,25 +11,34 @@ if is_notebook():
 else:
     from tqdm import tqdm as tqdm_cs
 
-def get_alchemy_frame(fpointer, spkit, spkitMax, nocenters, centerweight=1., gaussian_width=0.5,cutoff=3.5,
+def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None, centerweight=1., gaussian_width=0.5,cutoff=3.5,
                       cutoff_transition_width=0.5, nmax=8, lmax=6,chem_channels=True,is_fast_average=False,queue=None):
-    atoms = qp.Atoms(fpointer=fpointer)
-    atm = atoms
-    spkit = get_spkit(atm)
+    if nocenters is None:
+        nocenters = []
+
+    if atoms is None and fpointer is not None:
+        atoms = qp.Atoms(fpointer=fpointer)
+    elif atoms is not None and fpointer is None:
+        atoms = atoms
+    elif atoms is not None and fpointer is not None:
+        atoms = atoms
+    else:
+        raise NotImplementedError('At least atoms or fpointer needs to be given')
+    spkit = get_spkit(atoms)
     soapParams = {'spkit': spkit, 'spkitMax': spkitMax, 'nocenters': nocenters,
                   'centerweight': centerweight, 'gaussian_width': gaussian_width,
                   'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
                   'nmax': nmax, 'lmax': lmax,'is_fast_average':is_fast_average}
 
 
-    rawsoaps = get_soap(atm, **soapParams)
+    rawsoaps = get_soap(atoms, **soapParams)
 
-    zList = atm.get_atomic_numbers()
+    zList = atoms.get_atomic_numbers()
 
-    mm = envIdx2centerIdxMap(atm, spkit, nocenters)
+    mm = envIdx2centerIdxMap(atoms, spkit, nocenters)
     # chemical channel separation for each central atom species
     # and each atomic environment
-    alchemyFrame = AlchemyFrame(atom=atm, nocenters=nocenters, soapParams=soapParams)
+    alchemyFrame = AlchemyFrame(atom=atoms, nocenters=nocenters, soapParams=soapParams)
     Nenv, Npowerspectrum = rawsoaps.shape
     if chem_channels:
         for it in xrange(Nenv):
@@ -38,7 +47,7 @@ def get_alchemy_frame(fpointer, spkit, spkitMax, nocenters, centerweight=1., gau
             # with chemical channels.
             alchemySoapdict = Soap2AlchemySoap(rawsoaps[it, :], spkitMax, nmax, lmax)
 
-            alchemySoap = AlchemySoap(qpatoms=atm, soapParams=soapParams, centerIdx=mm[it],is_fast_average=is_fast_average)
+            alchemySoap = AlchemySoap(qpatoms=atoms, soapParams=soapParams, centerIdx=mm[it],is_fast_average=is_fast_average)
 
             alchemySoap.from_dict(alchemySoapdict)
 
@@ -62,7 +71,7 @@ class mp_soap(object):
     def __init__(self, chunks, nprocess):
         super(mp_soap, self).__init__()
         self.func_wrap = get_alchemy_frame_wrapper
-        self.func = get_alchemy_frame
+
         self.parent_id = os.getpid()
         self.nprocess = nprocess
 
@@ -87,7 +96,7 @@ class mp_soap(object):
 
         elif self.nprocess == 1:
             for chunk in self.chunks:
-                idx,res = self.func_wrap(**chunk)
+                idx,res = self.func_wrap(chunk)
                 results[idx] = res
 
                 pbar.update()
@@ -150,35 +159,23 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
         spkitMax = get_spkitMax(atoms)
 
     soapParams = [
-        {'fpointer': frame._fpointer.copy(), 'spkit': get_spkit(frame), 'spkitMax': spkitMax,
+        { 'spkit': get_spkit(frame), 'spkitMax': spkitMax,
          'nocenters': nocenters, 'is_fast_average': is_fast_average,
          'chem_channels': chem_channels,
          'centerweight': centerweight, 'gaussian_width': gaussian_width,
          'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
          'nmax': nmax, 'lmax': lmax} for frame in atoms]
 
-    # Frames = []
-    #
-    #
-    # pbar = tqdm_cs(total=len(atoms),desc='Soaps')
-    #
-    # if nprocess == 1:
-    #
-    #     for soapParam in soapParams:
-    #         frame = get_alchemy_frame(**soapParam)
-    #         Frames.append(frame)
-    #         pbar.update()
-    # elif nprocess > 1:
-    #     pool = mp.Pool(nprocess, maxtasksperchild=10)
-    #     Frames = pool.map(get_alchemy_frame_wrapper, soapParams)
-    #     pool.close()
-    #     pool.join()
-    #
-    # pbar.clear()
+    if nprocess > 1:
+        for soapParam,frame in zip(soapParams,atoms):
+            soapParam.update(**{'fpointer': frame._fpointer.copy()})
+    elif nprocess == 1:
+        for soapParam, frame in zip(soapParams, atoms):
+            soapParam.update(**{'atoms': frame})
 
-    pool = mp_soap(soapParams,nprocess)
+    compute_soaps = mp_soap(soapParams,nprocess)
 
-    Frames = pool.run()
+    Frames = compute_soaps.run()
 
     return Frames
 

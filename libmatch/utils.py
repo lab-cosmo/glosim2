@@ -253,9 +253,9 @@ def get_soapSize(frames, nmax, lmax,nocenters=None, dtype=None):
 
 
 class dummy_queue(object):
-    def __init__(self,Niter):
-        super(dummy_queue,self).__init__()
-        self.tbar = tqdm_cs(total=int(Niter), ascii=True)
+    def __init__(self,Niter,name):
+        # super(dummy_queue,self).__init__()
+        self.tbar = tqdm_cs(total=int(Niter),desc=name)
     def put(self,ii):
         self.tbar.update(ii)
     def __del__(self):

@@ -161,24 +161,15 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
     :param frameprodFunc: function to use to compute a environmental kernel matrix
     :return: dictionary of environmental kernel matrices -> (i,j):environmentalMatrix(frames1[i],frames2[j])
     '''
-    disable_pbar = True
+
 
     if queue is None:
         if frames2 is None:
             Niter = len(frames1)*(len(frames1)+1)/2
         else:
             Niter = len(frames1)*len(frames2)
-        queue = dummy_queue(Niter)
-        disable_pbar = False
+        queue = dummy_queue(Niter,'Env kernels')
 
-    # proc_id = os.getpid()
-    proc_name = mp.current_process().name
-
-    # if proc_name == 'MainProcess':
-    #     pos = 0
-    # else:
-    #     sss = proc_name.split('-')
-    #     pos = int(sss[-1])
 
     envkernels = {}
 
@@ -534,7 +525,7 @@ class mp_framesprod(object):
 
     @staticmethod
     def listener(queue, Niter):
-        tbar = tqdm_cs(total=int(Niter),ascii=True,desc='Env Sim')
+        tbar = tqdm_cs(total=int(Niter),ascii=True,desc='Env kernels')
         for ii in iter(queue.get, None):
             tbar.update(ii)
         tbar.close()
