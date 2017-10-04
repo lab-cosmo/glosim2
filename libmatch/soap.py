@@ -109,7 +109,7 @@ class mp_soap(object):
         Frames = [results[it] for it in range(Nit)]
 
         return Frames
-
+    # clean kill of the pool in interactive sessions
     def worker_init(self):
         def sig_int(signal_num, frame):
             print('signal: %s' % signal_num)

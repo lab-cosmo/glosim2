@@ -530,6 +530,7 @@ class mp_framesprod(object):
             tbar.update(ii)
         tbar.close()
 
+    # clean kill of the pool in interactive sessions
     def worker_init(self):
         def sig_int(signal_num, frame):
             print('signal: %s' % signal_num)

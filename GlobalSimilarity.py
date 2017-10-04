@@ -190,6 +190,9 @@ if __name__ == '__main__':
              "-g"+str(gaussian_width)+ "-cw"+str(centerweight)+ \
              "-cotw" +str(cutoff_transition_width)
 
+    if is_fast_average:
+        prefix += '-fastavg'
+
     fn_env_kernels = prefix+'-env_kernels.pck'
 
     if global_kernel_type == 'average':
