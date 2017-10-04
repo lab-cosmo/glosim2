@@ -2,14 +2,19 @@ import numpy as np
 
 from libmatch.chemical_kernel import Atoms2ChemicalKernelmat
 from libmatch.soap import get_Soaps
-from libmatch.utils import chunk_list, chunks1d_2_chuncks2d,is_notebook
+from libmatch.utils import chunk_list, chunks1d_2_chuncks2d,is_notebook,dummy_queue
 from soap import get_Soaps
 import multiprocessing as mp
 import signal, psutil, os
 import threading
 import os
-from tqdm import tqdm
+
 import quippy as qp
+
+if is_notebook():
+    from tqdm import tqdm_notebook as tqdm_cs
+else:
+    from tqdm import tqdm as tqdm_cs
 
 try:
     import numba as nb
@@ -158,22 +163,7 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
     '''
     disable_pbar = True
 
-    if is_notebook():
-        from tqdm import tqdm_notebook as tqdm_cs
-        ascii = False
-    else:
-        from tqdm import tqdm as tqdm_cs
-        ascii = True
-
     if queue is None:
-        class dummy_queue(object):
-            def __init__(self,Niter):
-                super(dummy_queue,self).__init__()
-                self.tbar = tqdm_cs(total=int(Niter), ascii=True)
-            def put(self,ii):
-                self.tbar.update(ii)
-            def __del__(self):
-                self.tbar.close()
         if frames2 is None:
             Niter = len(frames1)*(len(frames1)+1)/2
         else:
@@ -466,23 +456,24 @@ def framesprod_wrapper(kargs):
 
         chemicalKernelmat = kargs.pop('chemicalKernelmat')
 
-        frames1 = get_Soaps(atoms1,  **kargs)
+        frames1 = get_Soaps(atoms1, **kargs)
         if fpointers2 is not None:
             atoms2 = [qp.Atoms(fpointer=fpointer2) for fpointer2 in fpointers2]
-            frames2 = get_Soaps(atoms2,  **kargs)
+            frames2 = get_Soaps(atoms2, **kargs)
         else:
             frames2 = None
 
-        kargs = {'frames1': frames1, 'frames2': frames2, 'chemicalKernelmat': chemicalKernelmat}
+        kargs = {'frames1': frames1, 'frames2': frames2,
+                 'chemicalKernelmat': chemicalKernelmat}
 
     elif 'atoms1' in keys:
         atoms1 = kargs.pop('atoms1')
         atoms2 = kargs.pop('atoms2')
         chemicalKernelmat = kargs.pop('chemicalKernelmat')
 
-        frames1 = get_Soaps(atoms1,  **kargs)
+        frames1 = get_Soaps(atoms1, **kargs)
         if atoms2 is not None:
-            frames2 = get_Soaps(atoms2,  **kargs)
+            frames2 = get_Soaps(atoms2, **kargs)
         else:
             frames2 = None
 
@@ -543,12 +534,7 @@ class mp_framesprod(object):
 
     @staticmethod
     def listener(queue, Niter):
-        if is_notebook():
-            from tqdm import tqdm_notebook as tqdm_cs
-        else:
-            from tqdm import tqdm as tqdm_cs
-
-        tbar = tqdm_cs(total=int(Niter),ascii=True)
+        tbar = tqdm_cs(total=int(Niter),ascii=True,desc='Env Sim')
         for ii in iter(queue.get, None):
             tbar.update(ii)
         tbar.close()
@@ -605,7 +591,8 @@ def join_envKernel(results, slices):
 def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                             nthreads=4, nprocess=2, nchunks=2,islow_memory=False,isDeltaKernel=True):
+                             nthreads=4, nprocess=2, nchunks=2,islow_memory=False,isDeltaKernel=True,
+                                          is_fast_average=False):
     if nocenters is None:
         nocenters = []
 
@@ -626,11 +613,9 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     # chunks1d, slices = chunk_list(fpointers, nchunks=nchunks)
     # cut atomsList in chunks
     if islow_memory:
-        frames = get_Soaps(atoms, nprocess=nprocess, nocenters=nocenters, chem_channels=chem_channels,
-                           centerweight=centerweight,
-                           gaussian_width=gaussian_width, cutoff=cutoff,
-                           cutoff_transition_width=cutoff_transition_width,
-                           nmax=nmax, lmax=lmax)
+        frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
+                           gaussian_width=gaussian_width, cutoff=cutoff,is_fast_average=is_fast_average,
+                           cutoff_transition_width=cutoff_transition_width, nmax=nmax, lmax=lmax, nprocess=nprocess)
         chunks1d, slices = chunk_list(frames, nchunks=nchunks)
 
     else:
@@ -639,7 +624,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     soap_params = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
                    'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
                    'nmax': nmax, 'lmax': lmax, 'chemicalKernelmat': chemicalKernelmat,
-                   'chem_channels': chem_channels, 'nocenters': nocenters,
+                   'chem_channels': chem_channels, 'nocenters': nocenters, 'is_fast_average':is_fast_average,
                    }
 
     # create inputs for each block of the global kernel matrix
@@ -674,7 +659,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                                            gaussian_width=0.5, cutoff=3.5, cutoff_transition_width=0.5,
                                            nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                                           nthreads=4, nprocess=0, nchunks=0,isDeltaKernel=True):
+                                           nthreads=4, nprocess=0, nchunks=0,isDeltaKernel=True,is_fast_average=False):
     if nocenters is None:
         nocenters = []
 
@@ -691,9 +676,9 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
         raise ValueError('wrong chemicalKernelmat and/or chemicalKernel input')
 
     # get the soap for every local environement
-    frames = get_Soaps(atoms,nprocess=mp.cpu_count(), nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
+    frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
                        gaussian_width=gaussian_width, cutoff=cutoff, cutoff_transition_width=cutoff_transition_width,
-                       nmax=nmax, lmax=lmax)
+                       nmax=nmax, lmax=lmax, nprocess=nprocess,is_fast_average=is_fast_average)
 
     # get the environmental kernels as a dictionary
     environmentalKernels = framesprod(frames, frameprodFunc=get_envKernel, chemicalKernelmat=chemicalKernelmat)

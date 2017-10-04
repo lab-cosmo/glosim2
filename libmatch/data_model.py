@@ -11,7 +11,7 @@ class AlchemySoap(MutableMapping):
     Container class for the soap vectors in their alchemy format.
 
     '''
-    def __init__(self ,qpatoms ,soapParams ,centerIdx ,nocenters=None):
+    def __init__(self ,qpatoms ,soapParams ,centerIdx ,nocenters=None,is_fast_average=False):
         # keys is a list of all the possible key that are needed in the dictionary
         if nocenters is None:
             nocenters = []
@@ -35,19 +35,33 @@ class AlchemySoap(MutableMapping):
 
         self._empty = np.zeros((Nsoap,) ,dtype=self.dtype)
 
-        self._frameIdx = centerIdx
-        self._position = qpatoms.positions[centerIdx ,:]
-        self._atomic_number = qpatoms.get_atomic_numbers()[centerIdx]
-        self._cell = qpatoms.get_cell()
-        self._chemical_symbol = qpatoms.get_chemical_symbols()[centerIdx]
-        self._info = {}
-        for key,item in qpatoms.arrays.iteritems():
-            if key in garbageKey:
-                continue
-            self._info[key] = item[centerIdx].copy()
+        self.is_fast_average = is_fast_average
 
-        self._localEnvironementDict = get_localEnv(qpatoms, centerIdx,
-                                                   self._soapParams['cutoff'], onlyDict=True)
+        if is_fast_average:
+            self._frameIdx = None
+            self._position = None
+            self._atomic_number = None
+            self._cell = None
+            self._chemical_symbol = None
+
+            self._localEnvironementDict = None
+            self._info = None
+        else:
+            self._frameIdx = centerIdx
+            self._position = qpatoms.positions[centerIdx ,:]
+            self._atomic_number = qpatoms.get_atomic_numbers()[centerIdx]
+            self._cell = qpatoms.get_cell()
+            self._chemical_symbol = qpatoms.get_chemical_symbols()[centerIdx]
+
+
+            self._localEnvironementDict = get_localEnv(qpatoms, centerIdx,
+                                                       self._soapParams['cutoff'], onlyDict=True)
+            self._info = {}
+            for key,item in qpatoms.arrays.iteritems():
+                if key in garbageKey:
+                    continue
+                self._info[key] = item[centerIdx].copy()
+
 
         upperKeys = []
 
@@ -83,16 +97,24 @@ class AlchemySoap(MutableMapping):
         return self._upperKeys
     def get_allKeys(self):
         return self._allKeys
+
     def get_centerInfo(self):
-        from ase import Atoms as aseAtoms
-        info = {'z' :self._atomic_number ,'position' :self._position ,
-                'cell' :self._cell ,'idx' :self._frameIdx,
-                'symbol':self._chemical_symbol,'env': aseAtoms(**self._localEnvironementDict)}
-        info.update(**self._info)
-        return info
+        if self.is_fast_average:
+            print 'fast average -> no center'
+        else:
+            from ase import Atoms as aseAtoms
+            info = {'z' :self._atomic_number ,'position' :self._position ,
+                    'cell' :self._cell ,'idx' :self._frameIdx,
+                    'symbol':self._chemical_symbol,'env': aseAtoms(**self._localEnvironementDict)}
+            info.update(**self._info)
+            return info
     def get_localEnvironement(self):
-        from ase import Atoms as aseAtoms
-        return aseAtoms(**self._localEnvironementDict)
+        if self.is_fast_average:
+            print 'fast average -> no center'
+        else:
+            from ase import Atoms as aseAtoms
+            return aseAtoms(**self._localEnvironementDict)
+
     def get_filledKeys(self):
         return self._filledKeys
     def get_emptyKeys(self):

@@ -139,7 +139,7 @@ if __name__ == '__main__':
     soap_params = {
         'centerweight': centerweight, 'gaussian_width': gaussian_width,
         'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-        'nmax': nmax, 'lmax': lmax, 'chem_channels': True, 'nocenters': nocenters,
+        'nmax': nmax, 'lmax': lmax, 'chem_channels': True, 'nocenters': nocenters
     }
 
     # DELTA CHEMICAL KERNEL hard coded
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     ####################################################################################
     # get the soap for every local environement
     print 'Compute xSoap {} with {} process from {}'.format(xlim, nprocess, filename)
-    frames1 = get_Soaps(atoms1, nprocess=nprocess,**soap_params )
+    frames1 = get_Soaps(atoms1,nprocess=nprocess, **soap_params )
 
     print 'Compute xSoap {} with {} process from {}: done {}'.format(xlim,nprocess, filename, s2hms(time.time() - st))
     if atoms2 is None:
@@ -158,7 +158,7 @@ if __name__ == '__main__':
         print 'no atoms 2, Computing upper triangular sub matrix'
     else:
         print 'Compute ySoap {} process from {}'.format(ylim, nprocess, filename)
-        frames2 = get_Soaps(atoms2, nprocess=nprocess, **soap_params )
+        frames2 = get_Soaps(atoms2,nprocess=nprocess **soap_params )
         print 'Compute ySoap {} process from {}: done {}'.format(ylim,nprocess, filename, s2hms(time.time() - st))
 
     ########################################################################################

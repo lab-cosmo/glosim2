@@ -3,6 +3,25 @@ from copy import deepcopy
 import numpy  as np
 import quippy as qp
 
+def is_notebook():
+    from IPython import get_ipython
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
+if is_notebook():
+    from tqdm import tqdm_notebook as tqdm_cs
+    ascii = False
+else:
+    from tqdm import tqdm as tqdm_cs
+    ascii = True
 
 def s2hms(time):
     m = time // 60
@@ -205,19 +224,6 @@ def chunks1d_2_chuncks2d(chunk_1d, **kargs):
     return chunks
 
 
-def is_notebook():
-    from IPython import get_ipython
-    try:
-        shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':
-            return True   # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
-            return False  # Terminal running IPython
-        else:
-            return False  # Other type (?)
-    except NameError:
-        return False      # Probably standard Python interpreter
-
 def get_soapSize(frames, nmax, lmax,nocenters=None, dtype=None):
     '''
     Estimate the maximum size of the alchemical soap vectors generated from the input frames in Mb.
@@ -242,6 +248,20 @@ def get_soapSize(frames, nmax, lmax,nocenters=None, dtype=None):
 
     print 'Max size of the SOAP descriptors: {:.0f} Mb'.format(totSize // 1e6)
     return totSize // 1e6
+
+
+
+
+class dummy_queue(object):
+    def __init__(self,Niter):
+        super(dummy_queue,self).__init__()
+        self.tbar = tqdm_cs(total=int(Niter), ascii=True)
+    def put(self,ii):
+        self.tbar.update(ii)
+    def __del__(self):
+        self.tbar.close()
+
+
 
 def print_logo():
     print r'_____/\\\\\\\\\\\\__/\\\\\\_____________________________________________________________/\\\\\\\\\_____        '

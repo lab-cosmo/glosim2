@@ -50,7 +50,7 @@ def get_globalKernel(environmentalKernels,kernel_type='average',zeta=2,gamma=1.,
 
 def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
-                             nmax=8, lmax=6, chemicalKernel=deltaKernel,
+                             nmax=8, lmax=6, chemicalKernel=deltaKernel,is_fast_average=False,
                              nthreads=4, nprocess=2, nchunks = 2,islow_memory=False):
     '''
     Compute the environmental kernels for every atoms (frame) pairs. Wrapper function around several setup.
@@ -84,15 +84,19 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
     else:
         isDeltaKernel = False
 
+    # The threads are over the center atoms -> fast avg only has 1
+    if is_fast_average:
+        nthreads = 1
+
     soap_params = {
               'atoms':atoms,'centerweight': centerweight, 'gaussian_width': gaussian_width,
               'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
               'nmax': nmax, 'lmax': lmax, 'chemicalKernelmat': chemicalKernelmat,
-              'chem_channels': True ,'nocenters': nocenters,
+              'chem_channels': True ,'nocenters': nocenters,'is_fast_average':is_fast_average,
                    }
     
     if nchunks == 1:
-        kargs = {'nthreads':nthreads,'isDeltaKernel':isDeltaKernel}
+        kargs = {'nthreads':nthreads,'nprocess':nprocess,'isDeltaKernel':isDeltaKernel}
         kargs.update(**soap_params)
         # get the environmental kernels as a dictionary
         environmentalKernels = get_environmentalKernels_singleprocess(**kargs)
@@ -117,6 +121,7 @@ if __name__ == '__main__':
     parser.add_argument("-cotw", type=float, default=0.5, help="Cutoff transition width")
     parser.add_argument("-g", type=float, default=0.5, help="Atom Gaussian sigma")
     parser.add_argument("-cw", type=float, default=1.0, help="Center atom weight")
+    parser.add_argument("-fa", "--fast-average", action='store_true', help="Fast average (soap vector are averaged over the frame in quippy -> less memory/computation intensive)")
     parser.add_argument("-k","--kernel", type=str, default="average",
                         help="Global kernel mode (e.g. --kernel average / rematch ")
     parser.add_argument("-gm","--gamma", type=float, default=1.0,
@@ -155,6 +160,7 @@ if __name__ == '__main__':
     nprocess = args.nprocess
     nchunks = args.nchunks
     normalize_global_kernel = args.normalize_global_kernel
+    is_fast_average = args.fast_average
     save_env_kernels = args.save_env_kernels
     islow_memory = args.low_memory
 
@@ -207,7 +213,7 @@ if __name__ == '__main__':
         'atoms': atoms, 'centerweight': centerweight, 'gaussian_width': gaussian_width,
         'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
         'nmax': nmax, 'lmax': lmax, 'chemicalKernel': deltaKernel,
-        'chem_channels': True, 'nocenters': nocenters,
+        'chem_channels': True, 'nocenters': nocenters,'is_fast_average':is_fast_average,
     }
 
     print 'Reading {} input atomic structure from {}: done {}'.format(n,filename,s2hms(time.time() - st))
@@ -231,7 +237,7 @@ if __name__ == '__main__':
 
     # Reduce the environemental kernels into global kernels
     globalKernel = get_globalKernel(environmentalKernels,kernel_type=global_kernel_type, zeta=zeta, gamma=gamma,
-                                    eps=1e-6, nthreads=8,
+                                    eps=1e-6, nthreads=8,is_fast_average=is_fast_average,
                                     normalize_global_kernel=normalize_global_kernel)
 
     if global_kernel_type == 'average':

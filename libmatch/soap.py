@@ -3,54 +3,129 @@ import numpy  as np
 from utils import get_spkit,get_spkitMax,envIdx2centerIdxMap
 from data_model import AlchemyFrame,AlchemySoap
 import multiprocessing as mp
-from libmatch.utils import chunk_list
+from libmatch.utils import is_notebook
+import os,signal,threading,psutil
 
+if is_notebook():
+    from tqdm import tqdm_notebook as tqdm_cs
+else:
+    from tqdm import tqdm as tqdm_cs
 
-def get_alchemy_frame(fpointer, spkit, spkitMax, nocenters, centerweight=1., gaussian_width=0.5,
-                      cutoff=3.5, cutoff_transition_width=0.5, nmax=8, lmax=6):
+def get_alchemy_frame(fpointer, spkit, spkitMax, nocenters, centerweight=1., gaussian_width=0.5,cutoff=3.5,
+                      cutoff_transition_width=0.5, nmax=8, lmax=6,chem_channels=True,is_fast_average=False,queue=None):
     atoms = qp.Atoms(fpointer=fpointer)
     atm = atoms
     spkit = get_spkit(atm)
     soapParams = {'spkit': spkit, 'spkitMax': spkitMax, 'nocenters': nocenters,
                   'centerweight': centerweight, 'gaussian_width': gaussian_width,
                   'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-                  'nmax': nmax, 'lmax': lmax}
+                  'nmax': nmax, 'lmax': lmax,'is_fast_average':is_fast_average}
+
 
     rawsoaps = get_soap(atm, **soapParams)
 
     zList = atm.get_atomic_numbers()
 
     mm = envIdx2centerIdxMap(atm, spkit, nocenters)
-
+    # chemical channel separation for each central atom species
+    # and each atomic environment
     alchemyFrame = AlchemyFrame(atom=atm, nocenters=nocenters, soapParams=soapParams)
     Nenv, Npowerspectrum = rawsoaps.shape
+    if chem_channels:
+        for it in xrange(Nenv):
+            # soap[it] is (1,Npowerspectrum) so need to transpose it
+            #  convert the soap vector of an environment from quippy descriptor to soap vectors
+            # with chemical channels.
+            alchemySoapdict = Soap2AlchemySoap(rawsoaps[it, :], spkitMax, nmax, lmax)
 
-    for it in xrange(Nenv):
-        # soap[it] is (1,Npowerspectrum) so need to transpose it
-        #  convert the soap vector of an environment from quippy descriptor to soap vectors
-        # with chemical channels.
-        alchemySoapdict = Soap2AlchemySoap(rawsoaps[it, :], spkitMax, nmax, lmax)
+            alchemySoap = AlchemySoap(qpatoms=atm, soapParams=soapParams, centerIdx=mm[it],is_fast_average=is_fast_average)
 
-        alchemySoap = AlchemySoap(qpatoms=atm, soapParams=soapParams, centerIdx=mm[it])
+            alchemySoap.from_dict(alchemySoapdict)
 
-        alchemySoap.from_dict(alchemySoapdict)
+            centerZ = zList[mm[it]]
+            alchemyFrame[centerZ] = alchemySoap
+    else:
+        for it in xrange(Nenv):
+            centerZ = zList[mm[it]]
+            alchemyFrame[centerZ] = rawsoaps[it, :]
 
-        centerZ = zList[mm[it]]
-        alchemyFrame[centerZ] = alchemySoap
+
     return alchemyFrame
 
 
 def get_alchemy_frame_wrapper(kargs):
-    return get_alchemy_frame(**kargs)
+    idx = kargs.pop('idx')
+    return (idx,get_alchemy_frame(**kargs))
+
+
+class mp_soap(object):
+    def __init__(self, chunks, nprocess):
+        super(mp_soap, self).__init__()
+        self.func_wrap = get_alchemy_frame_wrapper
+        self.func = get_alchemy_frame
+        self.parent_id = os.getpid()
+        self.nprocess = nprocess
+
+        for it,chunk in enumerate(chunks):
+            chunk.update(**{"idx": it})
+        self.chunks = chunks
+
+    def run(self):
+        Nit = len(self.chunks)
+        pbar = tqdm_cs(total=Nit,desc='SOAP vectors')
+        results = {}
+        if self.nprocess > 1:
+            pool = mp.Pool(self.nprocess, initializer=self.worker_init,
+                                maxtasksperchild=10)
+
+            for idx, res in pool.imap_unordered(self.func_wrap, self.chunks):
+                results[idx] = res
+                pbar.update()
+
+            pool.close()
+            pool.join()
+
+        elif self.nprocess == 1:
+            for chunk in self.chunks:
+                idx,res = self.func_wrap(**chunk)
+                results[idx] = res
+
+                pbar.update()
+        else:
+            print 'Nproces: ',self.nprocess
+            raise NotImplementedError('need at least 1 process')
+
+        pbar.close()
+
+        Frames = [results[it] for it in range(Nit)]
+
+        return Frames
+
+    def worker_init(self):
+        def sig_int(signal_num, frame):
+            print('signal: %s' % signal_num)
+            parent = psutil.Process(self.parent_id)
+            for child in parent.children():
+                if child.pid != os.getpid():
+                    print("killing child: %s" % child.pid)
+                    child.kill()
+            print("killing parent: %s" % self.parent_id)
+            parent.kill()
+            print("suicide: %s" % os.getpid())
+            psutil.Process(os.getpid()).kill()
+
+        signal.signal(signal.SIGINT, sig_int)
+
 
 
 
 def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
-              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None, nprocess=1):
+              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None, nprocess=1, is_fast_average=False):
     '''
     Compute the SOAP vectors for each atomic environment in atoms and
     reorder them into chemical channels.
 
+    :param is_fast_average: 
     :param nprocess: 
     :param atoms: list of quippy Atoms object
     :param centerweight: Center atom weight
@@ -69,76 +144,47 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
     if nocenters is None:
         nocenters = []
 
-    Frames = []
+
     # get the set of species their maximum number across atoms
     if spkitMax is None:
         spkitMax = get_spkitMax(atoms)
 
-    if nprocess == 1:
+    soapParams = [
+        {'fpointer': frame._fpointer.copy(), 'spkit': get_spkit(frame), 'spkitMax': spkitMax,
+         'nocenters': nocenters, 'is_fast_average': is_fast_average,
+         'chem_channels': chem_channels,
+         'centerweight': centerweight, 'gaussian_width': gaussian_width,
+         'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
+         'nmax': nmax, 'lmax': lmax} for frame in atoms]
 
-        soapParams = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
-                      'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-                      'nmax': nmax, 'lmax': lmax}
+    # Frames = []
+    #
+    #
+    # pbar = tqdm_cs(total=len(atoms),desc='Soaps')
+    #
+    # if nprocess == 1:
+    #
+    #     for soapParam in soapParams:
+    #         frame = get_alchemy_frame(**soapParam)
+    #         Frames.append(frame)
+    #         pbar.update()
+    # elif nprocess > 1:
+    #     pool = mp.Pool(nprocess, maxtasksperchild=10)
+    #     Frames = pool.map(get_alchemy_frame_wrapper, soapParams)
+    #     pool.close()
+    #     pool.join()
+    #
+    # pbar.clear()
 
-        for atom in atoms:
+    pool = mp_soap(soapParams,nprocess)
 
-            # to avoid side effect due to pointers
-            atm = atom.copy()
-            # get the set of species their number across atom
-            spkit = get_spkit(atm)
-            # get the soap vectors (power spectra) for each atomic environments in atm
-            rawsoaps = get_soap(atm, spkit, spkitMax, nocenters, **soapParams)
-
-            zList = atm.get_atomic_numbers()
-
-            mm = envIdx2centerIdxMap(atm, spkit, nocenters)
-            # chemical channel separation for each central atom species
-            # and each atomic environment
-            if chem_channels:
-                alchemyFrame = AlchemyFrame(atom=atm, nocenters=nocenters, soapParams=soapParams)
-                Nenv, Npowerspectrum = rawsoaps.shape
-
-                for it in xrange(Nenv):
-                    # soap[it] is (1,Npowerspectrum) so need to transpose it
-                    #  convert the soap vector of an environment from quippy descriptor to soap vectors
-                    # with chemical channels.
-                    alchemySoapdict = Soap2AlchemySoap(rawsoaps[it, :], spkitMax, nmax, lmax)
-
-                    alchemySoap = AlchemySoap(qpatoms=atm, soapParams=soapParams, centerIdx=mm[it])
-
-                    alchemySoap.from_dict(alchemySoapdict)
-
-                    centerZ = zList[mm[it]]
-                    alchemyFrame[centerZ] = alchemySoap
-
-                # gather soaps over the atom
-                Frames.append(alchemyFrame)
-            # output rawSoaps
-            else:
-                # raise NotImplementedError()
-                Frames.append(rawsoaps)
-    elif nprocess > 1:
-        if chem_channels:
-            soapParams = [
-                {'fpointer': frame._fpointer.copy(), 'spkit': get_spkit(frame), 'spkitMax': spkitMax,
-                 'nocenters': nocenters,
-                 'centerweight': centerweight, 'gaussian_width': gaussian_width,
-                 'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-                 'nmax': nmax, 'lmax': lmax} for frame in atoms]
-
-            pool = mp.Pool(nprocess, maxtasksperchild=10)
-
-            Frames = pool.map(get_alchemy_frame_wrapper, soapParams)
-            pool.close()
-            pool.join()
-        else:
-            raise NotImplementedError()
+    Frames = pool.run()
 
     return Frames
 
 
 def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_width=0.5,
-             cutoff=3.5, cutoff_transition_width=0.5, nmax=8, lmax=6):
+             cutoff=3.5, cutoff_transition_width=0.5, nmax=8, lmax=6,is_fast_average=False):
     '''
     Get the soap vectors (power spectra) for each atomic environments in atom.
 
@@ -154,6 +200,7 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
     :param cutoff_transition_width: Steepness of the smooth environmental cutoff radius. Smaller -> steeper
     :param nmax: Number of radial basis functions.
     :param lmax: Number of Spherical harmonics.
+    :param is_fast_average: bool. Compute the average soap in quippy and only returns it.
     :return: Soap vectors of atom. 2D array shape=(Nb of centers,Length of the rawsoap). The ordering of the centers is identical as in atom.
     '''
 
@@ -166,6 +213,18 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
     for z in zsp:
         lspecies = lspecies + str(z) + ' '
     lspecies = lspecies + '}'
+
+    if is_fast_average:
+        ##### AVERAGE FROM QUIPPY IS NOT THE SAME AS AVERAGING OVER THE CENTERS
+        average = 'F'
+        Ncenters = 1
+    else:
+        average = 'F'
+        Ncenters = 0
+        for z in atoms.get_atomic_numbers():
+            if z in nocenters:
+                continue
+            Ncenters += 1
 
     atoms.set_cutoff(cutoff)
     atoms.calc_connect()
@@ -185,8 +244,9 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
         centers += str(z) + ' '
     centers += '} '
 
-    soapstr = "soap central_reference_all_species=F central_weight=" + str(centerweight )+ \
-              "  covariance_sigma0=0.0 atom_sigma=" + str(gaussian_width) + \
+    soapstr = "average="+average+" normalise=T soap central_reference_all_species=F " \
+              " central_weight=" + str(centerweight )+ \
+              " covariance_sigma0=0.0 atom_sigma=" + str(gaussian_width) + \
               " cutoff=" + str(cutoff) + \
               " cutoff_transition_width=" + str(cutoff_transition_width) + \
               " n_max=" + str(nmax) + " l_max=" + str(lmax) + ' ' \
@@ -196,7 +256,10 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
     # computes the soap descriptors for the full frame (atom)
     soap = desc.calc(atoms ,grad=False)["descriptor"]
 
-    return soap
+    if is_fast_average:
+        soap = soap.mean(axis=0)
+
+    return soap.reshape((Ncenters,-1))
 
 
 def Soap2AlchemySoap(rawsoap, spkitMax, nmax, lmax):
