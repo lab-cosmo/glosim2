@@ -38,7 +38,7 @@ def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None,
     mm = envIdx2centerIdxMap(atoms, spkit, nocenters)
     # chemical channel separation for each central atom species
     # and each atomic environment
-    alchemyFrame = AlchemyFrame(atom=atoms, nocenters=nocenters, soapParams=soapParams)
+    alchemyFrame = AlchemyFrame(atom=atoms, nocenters=nocenters, soapParams=soapParams,is_fast_average=is_fast_average)
     Nenv, Npowerspectrum = rawsoaps.shape
     if chem_channels:
         for it in xrange(Nenv):
@@ -51,7 +51,7 @@ def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None,
 
             alchemySoap.from_dict(alchemySoapdict)
 
-            centerZ = zList[mm[it]]
+            centerZ = zList[mm[it]] if not is_fast_average else 'AVG'
             alchemyFrame[centerZ] = alchemySoap
     else:
         for it in xrange(Nenv):
@@ -255,6 +255,7 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
 
     if is_fast_average:
         soap = soap.mean(axis=0)
+
 
     return soap.reshape((Ncenters,-1))
 

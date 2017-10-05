@@ -244,12 +244,14 @@ class AtomicFrame(object):
 
 
 class AlchemyFrame(AtomicFrame, MutableMapping):
-    def __init__(self, atom, nocenters, soapParams):
+    def __init__(self, atom, nocenters, soapParams,is_fast_average):
         # atom is a libatom Atom object
         super(AlchemyFrame, self).__init__(atom, nocenters, soapParams)
 
         self.valdtype = np.float64
         self.keydtype = np.uint32
+
+        self.is_fast_average = is_fast_average
 
         self._storage = OrderedDict()
 
@@ -276,13 +278,16 @@ class AlchemyFrame(AtomicFrame, MutableMapping):
     def __setitem__(self, key, item):
         # asarray does not copy if the types are matching
         assert isinstance(item, AlchemySoap)
-        z = key
-        nb = self._count[z]
-        self._count[z] += 1
+        if self.is_fast_average:
+            self._storage['AVG'] = item
+        else:
+            z = key
+            nb = self._count[z]
+            self._count[z] += 1
 
-        self._int2symb[len(self._storage)] = atomicnb_to_symbol(z) + str(nb)
+            self._int2symb[len(self._storage)] = atomicnb_to_symbol(z) + str(nb)
 
-        self._storage[atomicnb_to_symbol(z) + str(nb)] = item
+            self._storage[atomicnb_to_symbol(z) + str(nb)] = item
 
     def __getitem__(self, key):
         if isinstance(key, int):

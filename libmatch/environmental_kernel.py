@@ -525,7 +525,7 @@ class mp_framesprod(object):
 
     @staticmethod
     def listener(queue, Niter):
-        tbar = tqdm_cs(total=int(Niter),ascii=True,desc='Env kernels')
+        tbar = tqdm_cs(total=int(Niter),desc='Env kernels')
         for ii in iter(queue.get, None):
             tbar.update(ii)
         tbar.close()

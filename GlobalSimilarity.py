@@ -191,6 +191,7 @@ if __name__ == '__main__':
              "-cotw" +str(cutoff_transition_width)
 
     if is_fast_average:
+        print 'Compute fast average kernel'
         prefix += '-fastavg'
 
     fn_env_kernels = prefix+'-env_kernels.pck'
