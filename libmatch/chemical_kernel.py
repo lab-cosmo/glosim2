@@ -1,5 +1,5 @@
 import numpy as np
-import mkl
+
 from numba import jitclass,typeof ,vectorize ,prange,njit ,jit  # import the decorator
 from numba import int32, float64 , void   # import the types
 from collections import MutableMapping
@@ -90,6 +90,7 @@ class PartialKernels(MutableMapping):
         self.dtype = 'float64'
         self.nthreads = nthreads
         try:
+            import mkl
             mkl.set_num_threads(self.nthreads)
         except:
             raise Warning('NUMPY DOES NOT SEEM TO BE LINKED TO MKL LIBRARY SO NTHREADS IS IGNORED')
@@ -264,7 +265,11 @@ class PartialKernels_slow(MutableMapping):
 
         self.dtype = 'float64'
         self.nthreads = nthreads
-        mkl.set_num_threads(self.nthreads)
+        try:
+            import mkl
+            mkl.set_num_threads(self.nthreads)
+        except:
+            raise Warning('NUMPY DOES NOT SEEM TO BE LINKED TO MKL LIBRARY SO NTHREADS IS IGNORED')
 
         self.fingerprintsA = fingerprintsA
         self.fingerprints_infoA = self.get_info(fingerprintsA)
