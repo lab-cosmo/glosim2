@@ -158,7 +158,7 @@ if __name__ == '__main__':
         print 'no atoms 2, Computing upper triangular sub matrix'
     else:
         print 'Compute ySoap {} process from {}'.format(ylim, nprocess, filename)
-        frames2 = get_Soaps(atoms2,nprocess=nprocess **soap_params )
+        frames2 = get_Soaps(atoms2,nprocess=nprocess, **soap_params )
         print 'Compute ySoap {} process from {}: done {}'.format(ylim,nprocess, filename, s2hms(time.time() - st))
 
     ########################################################################################
