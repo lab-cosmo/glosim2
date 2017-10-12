@@ -163,13 +163,14 @@ if __name__ == '__main__':
     commands = ['python {path2exec} {filename} ' \
                 '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' \
                 '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} ' \
+                '--nocenters {nocenters}' \
                 '-nt {nthreads} -np {nprocess} -nc 1 --xlim {xf},{xl} --ylim {yf},{yl}  ' \
                 '--prefix {prefix}{name}-{xf},{xl}-{yf},{yl} -sek ' \
                 '2>&1 | tee {prefix}log-{xf},{xl}-{yf},{yl} >/dev/null'
                 .format(path2exec=path2GlobSim,filename=filename,nmax=nmax,lmax=lmax,cutoff=cutoff,
                         gaussian_width=gaussian_width,centerweight=centerweight,
                         cutoff_transition_width=cutoff_transition_width,
-                        zeta=zeta,gamma=gamma,
+                        zeta=zeta,gamma=gamma,nocenters=args.nocenters,
                         nthreads=nthreads,nprocess=nprocess,
                         xf=xsl[0], xl=xsl[1], yf=ysl[0], yl=ysl[1],
                         prefix=tmp_path,name=name)
