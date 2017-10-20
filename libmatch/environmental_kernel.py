@@ -7,7 +7,6 @@ from soap import get_Soaps
 import multiprocessing as mp
 import signal, psutil, os
 import threading
-import os
 
 import quippy as qp
 
