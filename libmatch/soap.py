@@ -68,10 +68,10 @@ def get_alchemy_frame_wrapper(kargs):
 
 
 class mp_soap(object):
-    def __init__(self, chunks, nprocess):
+    def __init__(self, chunks, nprocess,dispbar=False):
         super(mp_soap, self).__init__()
         self.func_wrap = get_alchemy_frame_wrapper
-
+        self.dispbar = dispbar
         self.parent_id = os.getpid()
         self.nprocess = nprocess
 
@@ -81,7 +81,7 @@ class mp_soap(object):
 
     def run(self):
         Nit = len(self.chunks)
-        pbar = tqdm_cs(total=Nit,desc='SOAP vectors')
+        pbar = tqdm_cs(total=Nit,desc='SOAP vectors',disable=self.dispbar)
         results = {}
         if self.nprocess > 1:
             pool = mp.Pool(self.nprocess, initializer=self.worker_init,
@@ -129,7 +129,8 @@ class mp_soap(object):
 
 
 def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
-              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None, nprocess=1, is_fast_average=False):
+              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None, nprocess=1,
+              dispbar=False,is_fast_average=False):
     '''
     Compute the SOAP vectors for each atomic environment in atoms and
     reorder them into chemical channels.
@@ -173,7 +174,7 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
         for soapParam, frame in zip(soapParams, atoms):
             soapParam.update(**{'atoms': frame})
 
-    compute_soaps = mp_soap(soapParams,nprocess)
+    compute_soaps = mp_soap(soapParams,nprocess,dispbar=dispbar)
 
     Frames = compute_soaps.run()
 

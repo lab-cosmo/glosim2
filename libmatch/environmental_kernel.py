@@ -151,7 +151,7 @@ except:
 
 
 
-def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None, queue=None):
+def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None, queue=None,dispbar=False):
     '''
     Computes the environmental matrices between two list of AlchemyFrame.
 
@@ -168,7 +168,7 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
             Niter = len(frames1)*(len(frames1)+1)/2
         else:
             Niter = len(frames1)*len(frames2)
-        queue = dummy_queue(Niter,'Env kernels')
+        queue = dummy_queue(Niter,'Env kernels',dispbar=dispbar)
 
 
     envkernels = {}
@@ -398,7 +398,7 @@ def np_frameprod3_upper(keys1, vals1, keys2, vals2, chemicalKernelmat):
     return k
 
 
-def choose_envKernel_func(nthreads=4, isDeltaKernel=False):
+def choose_envKernel_func(nthreads=4, isDeltaKernel=False,verbose=False):
     '''
     Compile with numba the nb_frameprod_upper function.
 
@@ -410,20 +410,26 @@ def choose_envKernel_func(nthreads=4, isDeltaKernel=False):
         print 'Using numpy version of envKernel function'
         get_envKernel = np_frameprod3_upper
     else:
-        print 'Using compiled and threaded version of envKernel function'
+        if verbose:
+            print 'Using compiled and threaded version of envKernel function'
 
         if nthreads == 1:
-            print('1 threaded calc')
+            if verbose:
+                print('1 threaded calc')
             if isDeltaKernel:
-                print 'with implicit delta kernel function'
+                if verbose:
+                    print 'with implicit delta kernel function'
                 get_envKernel = nb_frameprod_upper_delta_singlethread
             else:
-                print 'with explicit delta kernel function'
+                if verbose:
+                    print 'with explicit delta kernel function'
                 get_envKernel = nb_frameprod_upper_singlethread
         elif nthreads in [2,4,6,9,12,16,25,36,48,64,81,100]:
-            print('{:.0f} threaded calc'.format(nthreads))
+            if verbose:
+                print('{:.0f} threaded calc'.format(nthreads))
             if isDeltaKernel:
-                print 'with implicit delta kernel function'
+                if verbose:
+                    print 'with implicit delta kernel function'
                 get_envKernel = nb_frameprod_upper_delta_multithread
             else:
                 get_envKernel = nb_frameprod_upper_multithread
@@ -438,7 +444,8 @@ def framesprod_wrapper(kargs):
     keys = kargs.keys()
     get_envKernel = kargs.pop('frameprodFunc')
     queue = kargs.pop('queue')
-
+    # to disable the progressbar
+    dispbar = kargs.pop('dispbar')
 
     if 'fpointers1' in keys:
         fpointers1 = kargs.pop('fpointers1')
@@ -447,10 +454,10 @@ def framesprod_wrapper(kargs):
 
         chemicalKernelmat = kargs.pop('chemicalKernelmat')
 
-        frames1 = get_Soaps(atoms1, **kargs)
+        frames1 = get_Soaps(atoms1,dispbar=dispbar, **kargs)
         if fpointers2 is not None:
             atoms2 = [qp.Atoms(fpointer=fpointer2) for fpointer2 in fpointers2]
-            frames2 = get_Soaps(atoms2, **kargs)
+            frames2 = get_Soaps(atoms2,dispbar=dispbar, **kargs)
         else:
             frames2 = None
 
@@ -462,9 +469,9 @@ def framesprod_wrapper(kargs):
         atoms2 = kargs.pop('atoms2')
         chemicalKernelmat = kargs.pop('chemicalKernelmat')
 
-        frames1 = get_Soaps(atoms1, **kargs)
+        frames1 = get_Soaps(atoms1,dispbar=dispbar, **kargs)
         if atoms2 is not None:
-            frames2 = get_Soaps(atoms2, **kargs)
+            frames2 = get_Soaps(atoms2,dispbar=dispbar, **kargs)
         else:
             frames2 = None
 
@@ -495,7 +502,7 @@ def framesprod_wrapper(kargs):
 #         return results
 
 class mp_framesprod(object):
-    def __init__(self, chunks, nprocess, nthreads, Niter,isDeltaKernel):
+    def __init__(self, chunks, nprocess, nthreads, Niter,isDeltaKernel,dispbar=False):
         super(mp_framesprod, self).__init__()
         self.func = framesprod_wrapper
         self.parent_id = os.getpid()
@@ -503,15 +510,16 @@ class mp_framesprod(object):
 
         self.nprocess = nprocess
         self.nthreads = nthreads
-
+        self.dispbar = dispbar
         manager = mp.Manager()
         self.queue = manager.Queue()
 
         for chunk in chunks:
-            chunk.update(**{"queue": self.queue,'frameprodFunc': self.get_envKernel})
+            chunk.update(**{"queue": self.queue,'frameprodFunc': self.get_envKernel,
+                            'dispbar':self.dispbar})
         self.chunks = chunks
 
-        self.thread = threading.Thread(target=self.listener, args=(self.queue, Niter))
+        self.thread = threading.Thread(target=self.listener, args=(self.queue, Niter,dispbar))
         self.thread.start()
         self.pool = mp.Pool(nprocess, initializer=self.worker_init,maxtasksperchild=1)
 
@@ -524,8 +532,9 @@ class mp_framesprod(object):
         return res
 
     @staticmethod
-    def listener(queue, Niter):
-        tbar = tqdm_cs(total=int(Niter),desc='Env kernels')
+    def listener(queue, Niter,dispbar):
+        print 'listener ',dispbar
+        tbar = tqdm_cs(total=int(Niter),desc='Env kernels',disable=dispbar)
         for ii in iter(queue.get, None):
             tbar.update(ii)
         tbar.close()
@@ -584,7 +593,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
                              nthreads=4, nprocess=2, nchunks=2,islow_memory=False,isDeltaKernel=True,
-                                          is_fast_average=False):
+                             dispbar=False,is_fast_average=False):
     if nocenters is None:
         nocenters = []
 
@@ -640,7 +649,8 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     #     chunk.update(**{'fpointers1':fpointers1,'fpointers2':fpointers2})
 
     # get a list of environemental kernels
-    pool = mp_framesprod(chunks, nprocess, nthreads, NenvKernels,isDeltaKernel=isDeltaKernel)
+    pool = mp_framesprod(chunks, nprocess, nthreads, NenvKernels,
+                         isDeltaKernel=isDeltaKernel,dispbar=dispbar)
     results = pool.run()
     # reorder the list of environemental kernels into a dictionary which keys are the (i,j) of the global kernel matrix
     environmentalKernels = join_envKernel(results, slices)
@@ -651,7 +661,8 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                                            gaussian_width=0.5, cutoff=3.5, cutoff_transition_width=0.5,
                                            nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
-                                           nthreads=4, nprocess=0, nchunks=0,isDeltaKernel=True,is_fast_average=False):
+                                           nthreads=4, nprocess=0, nchunks=0,isDeltaKernel=True,
+                                           dispbar=False,is_fast_average=False):
     if nocenters is None:
         nocenters = []
 
@@ -670,10 +681,12 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
     # get the soap for every local environement
     frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
                        gaussian_width=gaussian_width, cutoff=cutoff, cutoff_transition_width=cutoff_transition_width,
-                       nmax=nmax, lmax=lmax, nprocess=nprocess,is_fast_average=is_fast_average)
+                       nmax=nmax, lmax=lmax, nprocess=nprocess,
+                       dispbar=dispbar,is_fast_average=is_fast_average)
 
     # get the environmental kernels as a dictionary
-    environmentalKernels = framesprod(frames, frameprodFunc=get_envKernel, chemicalKernelmat=chemicalKernelmat)
+    environmentalKernels = framesprod(frames, frameprodFunc=get_envKernel, chemicalKernelmat=chemicalKernelmat,
+                                      dispbar=dispbar)
 
 
     return environmentalKernels

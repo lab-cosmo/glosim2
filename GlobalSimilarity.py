@@ -51,7 +51,7 @@ def get_globalKernel(environmentalKernels,kernel_type='average',zeta=2,gamma=1.,
 def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernel=deltaKernel,is_fast_average=False,
-                             nthreads=4, nprocess=2, nchunks = 2,islow_memory=False):
+                             nthreads=4, nprocess=2, nchunks = 2,islow_memory=False,dispbar=False):
     '''
     Compute the environmental kernels for every atoms (frame) pairs. Wrapper function around several setup.
     
@@ -96,13 +96,14 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
                    }
     
     if nchunks == 1:
-        kargs = {'nthreads':nthreads,'nprocess':nprocess,'isDeltaKernel':isDeltaKernel}
+        kargs = {'nthreads':nthreads,'nprocess':nprocess,'isDeltaKernel':isDeltaKernel,
+                 'dispbar':dispbar}
         kargs.update(**soap_params)
         # get the environmental kernels as a dictionary
         environmentalKernels = get_environmentalKernels_singleprocess(**kargs)
     else:
         kargs = {'nthreads':nthreads,'nprocess':nprocess,'isDeltaKernel':isDeltaKernel,
-                 'nchunks':nchunks,'islow_memory':islow_memory}
+                 'nchunks':nchunks,'islow_memory':islow_memory,'dispbar':dispbar}
         kargs.update(**soap_params)
 
 
