@@ -55,9 +55,8 @@ def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None,
             alchemyFrame[centerZ] = alchemySoap
     else:
         for it in xrange(Nenv):
-            centerZ = zList[mm[it]]
+            centerZ = zList[mm[it]] if not is_fast_average else 'AVG'
             alchemyFrame[centerZ] = rawsoaps[it, :]
-
 
     return alchemyFrame
 

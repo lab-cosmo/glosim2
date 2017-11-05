@@ -1,7 +1,7 @@
 from collections import MutableMapping,OrderedDict
 import numpy as np
 from utils import atomicnb_to_symbol,get_localEnv
-
+from ase import Atoms as aseAtoms
 
 garbageKey = ['positions','numbers','species','map_shift','n_neighb']
 
@@ -99,6 +99,7 @@ class AlchemySoap(MutableMapping):
         return self._allKeys
 
     def get_centerInfo(self):
+        
         if self.is_fast_average:
             print 'fast average -> no center'
         else:
