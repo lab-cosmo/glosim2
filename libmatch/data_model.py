@@ -12,6 +12,7 @@ class AlchemySoap(MutableMapping):
 
     '''
     def __init__(self ,qpatoms ,soapParams ,centerIdx ,nocenters=None,is_fast_average=False):
+        super(self.__class__, self).__init__()
         # keys is a list of all the possible key that are needed in the dictionary
         if nocenters is None:
             nocenters = []
@@ -247,7 +248,7 @@ class AtomicFrame(object):
 class AlchemyFrame(AtomicFrame, MutableMapping):
     def __init__(self, atom, nocenters, soapParams,is_fast_average):
         # atom is a libatom Atom object
-        super(AlchemyFrame, self).__init__(atom, nocenters, soapParams)
+        super(self.__class__, self).__init__(atom, nocenters, soapParams)
 
         self.valdtype = np.float64
         self.keydtype = np.uint32
