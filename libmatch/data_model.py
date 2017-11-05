@@ -278,9 +278,9 @@ class AlchemyFrame(AtomicFrame, MutableMapping):
             del values
     def __setitem__(self, key, item):
         # asarray does not copy if the types are matching
-        assert isinstance(item, AlchemySoap)
-        if self.is_fast_average:
-            self._storage['AVG'] = item
+        assert isinstance(item, AlchemySoap) or isinstance(item, np.ndarray)
+        if key == 'AVG':
+            self._storage[key] = item
         else:
             z = key
             nb = self._count[z]
