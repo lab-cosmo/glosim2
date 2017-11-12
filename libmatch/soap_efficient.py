@@ -6,6 +6,12 @@ import os,signal,psutil,sys
 import numpy as np
 
 
+if is_notebook():
+    from tqdm import tqdm_notebook as tqdm_cs
+else:
+    from tqdm import tqdm as tqdm_cs
+
+
 def compute_global_kernel(envk, strides, kernel_type='average', zeta=2, gamma=1.0, eps=1e-06,
                           normalize_global_kernel=False):
     Nframe = len(strides) - 1
