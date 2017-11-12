@@ -4,7 +4,7 @@ from libmatch.global_kernel import compile_rematch,normalizeKernel
 import multiprocessing as mp
 import os,signal,psutil,sys
 import numpy as np
-
+import quippy as qp
 
 if is_notebook():
     from tqdm import tqdm_notebook as tqdm_cs
