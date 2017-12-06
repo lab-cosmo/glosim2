@@ -35,6 +35,7 @@ def compute_global_kernel(envk, strides, kernel_type='average', zeta=2, gamma=1.
     return gbk
 
 
+
 def compute_env_kernel(feature_matrix):
     return np.dot(feature_matrix,feature_matrix.T)
 
