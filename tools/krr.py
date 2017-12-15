@@ -111,15 +111,15 @@ class KRR(object):
                                 np.add(np.power(diag,self.csi,out=diag), reg,out=diag))
 
             kernel, lower = cho_factor(kernel, lower=False, overwrite_a=True, check_finite=False)
-            self.L = kernel
+            L = kernel
         else:
             # kernel is not modified here
             reg = np.diag(np.divide(np.multiply(self.sigma ** 2, np.mean(diag)),
                             np.multiply(np.var(trainLabel), sampleWeights)) )
-            self.L, lower = cho_factor(np.power(kernel, self.csi) + reg, lower=False, overwrite_a=False,check_finite=False)
+            L, lower = cho_factor(np.power(kernel, self.csi) + reg, lower=False, overwrite_a=False,check_finite=False)
 
         # set the weights of the krr model
-        self.alpha = cho_solve((self.L, lower), trainLabel,overwrite_b=False).reshape((1,-1))
+        self.alpha = cho_solve((L, lower), trainLabel,overwrite_b=False).reshape((1,-1))
 
     def predict(self,kernel):
         '''kernel.shape is expected as (nTrain,nPred)'''
