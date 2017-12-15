@@ -8,7 +8,7 @@ from scipy.linalg import cho_solve,cho_factor
 sys.path.insert(0,os.path.dirname(os.path.realpath(__file__))+'/..')
 
 
-def prediction(kernel, prop, train_ids, test_ids, params, verbose=False):
+def validation(kernel, prop, train_ids, validation_ids, params, verbose=False):
     y = prop.reshape((-1, 1))
 
     model = KRR(**params)
@@ -18,18 +18,18 @@ def prediction(kernel, prop, train_ids, test_ids, params, verbose=False):
     ytrue_train = y[train_ids].reshape((-1,))
     sc_train = score(ypred_train, ytrue_train)
 
-    ypred_test = model.predict(kernel[np.ix_(train_ids, test_ids)])
-    ytrue_test = y[test_ids].reshape((-1,))
-    sc_test = score(ypred_test, ytrue_test)
+    ypred_val = model.predict(kernel[np.ix_(train_ids, validation_ids)])
+    ytrue_val = y[validation_ids].reshape((-1,))
+    sc_test = score(ypred_val, ytrue_val)
 
     if verbose:
-        print 'Train MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train)
-        print 'TEST MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_test)
+        print 'TRAIN MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train)
+        print 'VALIDATION MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_test)
 
-    return ypred_test,ytrue_test,sc_test,ypred_train,ytrue_train,sc_train
+    return ypred_val,ytrue_val,sc_test,ypred_train,ytrue_train,sc_train
 
 
-def prediction_rec(kernel_train,kernel_test, prop_train,prop_test, params, verbose=False):
+def prediction(kernel_train,kernel_test, prop_train,prop_test, params, verbose=False):
     prop_train = prop_train.reshape((-1, 1))
     prop_test = prop_test.reshape((-1, 1))
 

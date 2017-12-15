@@ -1,10 +1,9 @@
 import numpy as np
 import numpy.random as npr
 from krr import prediction
-from sklearn.model_selection import ParameterGrid,KFold
+from sklearn.model_selection import KFold
 import sys,os,signal,psutil
 import argparse
-from Pool.mpi_pool import MPIPool
 from multiprocessing import Pool
 import seaborn as sns
 import matplotlib.pyplot as plt
