@@ -100,10 +100,13 @@ class KRR(object):
 
         diag = kernel.diagonal().copy()
         self.lower = False
+        reg = np.multiply(
+            np.divide(np.multiply(self.sigma ** 2, np.mean(diag)), np.var(trainLabel)),
+            sampleWeights)
+
         if self.memory_eff:
             # kernel is modified here
-            reg = np.divide(np.multiply(self.sigma ** 2, np.mean(diag)),
-                                np.multiply(np.var(trainLabel), sampleWeights))
+
             np.fill_diagonal(np.power(kernel, self.csi, out=kernel),
                                 np.add(np.power(diag,self.csi,out=diag), reg,out=diag))
 
@@ -111,8 +114,7 @@ class KRR(object):
             L = kernel
         else:
             # kernel is not modified here
-            reg = np.diag(np.divide(np.multiply(self.sigma ** 2, np.mean(diag)),
-                            np.multiply(np.var(trainLabel), sampleWeights)) )
+            reg = np.diag(reg)
             L, lower = cho_factor(np.power(kernel, self.csi) + reg, lower=False, overwrite_a=False,check_finite=False)
 
         # set the weights of the krr model
