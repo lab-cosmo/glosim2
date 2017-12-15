@@ -84,20 +84,17 @@ class KRR(object):
             self.invfunc = invfunc
         # Weights of the krr model
         self.alpha = None
-        # Estimate of the confidence on a (sample,prop) point in the training set.
-        self.sampleWeights = sampleWeights
 
         self.memory_eff = memory_eff
 
-    def train(self,kernel,labels):
+    def train(self,kernel,labels,sampleWeights=None):
         '''Train the krr model with trainKernel and trainLabel. If sampleWeights are set then they are used.'''
         nTrain, _ = kernel.shape
 
         # uses the sample weights from default or leave one out procedure
-        if self.sampleWeights is None:
+        if sampleWeights is None:
             sampleWeights = np.ones((nTrain,))
-        else:
-            sampleWeights = self.sampleWeights
+
         # learn a function of the label
         trainLabel = self.func(labels)
 
