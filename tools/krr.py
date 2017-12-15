@@ -20,13 +20,13 @@ def validation(kernel, prop, train_ids, validation_ids, params, verbose=False):
 
     ypred_val = model.predict(kernel[np.ix_(train_ids, validation_ids)])
     ytrue_val = y[validation_ids].reshape((-1,))
-    sc_test = score(ypred_val, ytrue_val)
+    sc_val = score(ypred_val, ytrue_val)
 
     if verbose:
         print 'TRAIN MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train)
-        print 'VALIDATION MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_test)
+        print 'VALIDATION MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_val)
 
-    return ypred_val,ytrue_val,sc_test,ypred_train,ytrue_train,sc_train
+    return ypred_val,ytrue_val,sc_val,ypred_train,ytrue_train,sc_train,model
 
 
 def prediction(kernel_train,kernel_test, prop_train,prop_test, params, verbose=False):
