@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.random as npr
-from krr import prediction
+from krr import validation
 from sklearn.model_selection import KFold
 import sys,os,signal,psutil
 import argparse
@@ -65,7 +65,7 @@ def point(kernel, prop, params, cv, Ntrain, seeds):
             test_ids = test
 
             ypred_test, ytrue_test, sc_test, ypred_train, ytrue_train, sc_train = \
-                prediction(kernel, prop, train_ids, test_ids, params, verbose=False)
+                validation(kernel, prop, train_ids, test_ids, params, verbose=False)
 
             score_inner.append(sc_test)
             score_inner_train.append(sc_train)
