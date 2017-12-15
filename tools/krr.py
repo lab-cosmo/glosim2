@@ -11,9 +11,12 @@ sys.path.insert(0,os.path.dirname(os.path.realpath(__file__))+'/..')
 def validation(kernel, prop, train_ids, validation_ids, params, verbose=False):
     y = prop.reshape((-1, 1))
 
+    # train model
     model = KRR(**params)
+    # kernel is copied here
     model.train(kernel[np.ix_(train_ids, train_ids)], y[train_ids])
 
+    # kernel is copied here
     ypred_train = model.predict(kernel[np.ix_(train_ids, train_ids)])
     ytrue_train = y[train_ids].reshape((-1,))
     sc_train = score(ypred_train, ytrue_train)
