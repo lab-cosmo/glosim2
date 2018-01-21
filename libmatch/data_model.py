@@ -195,7 +195,7 @@ class ProjectedAlchemySoap(MutableMapping):
 
     '''
 
-    def __init__(self, alchemySoap,chemicalProjection):
+    def __init__(self, alchemySoap,chemicalProjection,dropInfo=True):
         super(self.__class__, self).__init__()
         # keys is a list of all the possible key that are needed in the dictionary
 
@@ -223,7 +223,8 @@ class ProjectedAlchemySoap(MutableMapping):
         self._emptyKeys = ()
         self._allKeys = chemicalProjection.keys()
 
-        self._alchemySoap = alchemySoap
+        if dropInfo is False:
+            self._alchemySoap = alchemySoap
 
         self._storage = self.get_projected_alchemy(alchemySoap,chemicalProjection)
 
@@ -244,7 +245,6 @@ class ProjectedAlchemySoap(MutableMapping):
     def update_projection(self,chemicalProjection):
         self.alchemyProjection = chemicalProjection
         self._storage = self.get_projected_alchemy(self._alchemySoap,chemicalProjection)
-
 
     def __del__(self):
         for values in self.__dict__.values():
