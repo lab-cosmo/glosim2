@@ -591,6 +591,7 @@ def join_envKernel(results, slices):
 def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                              gaussian_width=0.5, cutoff=3.5,cutoff_transition_width=0.5,
                              nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
+                             chemicalProjection=None,
                              nthreads=4, nprocess=2, nchunks=2,islow_memory=False,isDeltaKernel=True,
                              dispbar=False,is_fast_average=False):
     if nocenters is None:
@@ -600,6 +601,8 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     # kernel function
 
     if chemicalKernelmat is not None:
+        pass
+    elif chemicalProjection is not None:
         pass
     elif (chemicalKernelmat is None) and (chemicalKernel is not None):
         chemicalKernelmat = Atoms2ChemicalKernelmat(atoms, chemicalKernel=chemicalKernel)
@@ -615,6 +618,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     if islow_memory:
         frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
                            gaussian_width=gaussian_width, cutoff=cutoff,is_fast_average=is_fast_average,
+                           chemicalProjection=chemicalProjection,
                            cutoff_transition_width=cutoff_transition_width, nmax=nmax, lmax=lmax, nprocess=nprocess)
         chunks1d, slices = chunk_list(frames, nchunks=nchunks)
 
@@ -624,6 +628,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
     soap_params = {'centerweight': centerweight, 'gaussian_width': gaussian_width,
                    'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
                    'nmax': nmax, 'lmax': lmax, 'chemicalKernelmat': chemicalKernelmat,
+                   'chemicalProjection':chemicalProjection,
                    'chem_channels': chem_channels, 'nocenters': nocenters, 'is_fast_average':is_fast_average,
                    }
 
@@ -660,6 +665,7 @@ def get_environmentalKernels_mt_mp_chunks(atoms, nocenters=None, chem_channels=T
 def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=True, centerweight=1.0,
                                            gaussian_width=0.5, cutoff=3.5, cutoff_transition_width=0.5,
                                            nmax=8, lmax=6, chemicalKernelmat=None, chemicalKernel=None,
+                                           chemicalProjection=None,
                                            nthreads=4, nprocess=0, nchunks=0,isDeltaKernel=True,
                                            dispbar=False,is_fast_average=False):
     if nocenters is None:
@@ -672,6 +678,8 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
     # kernel function
     if chemicalKernelmat is not None:
         pass
+    elif chemicalProjection is not None:
+        pass
     elif chemicalKernelmat is None and chemicalKernel is not None:
         chemicalKernelmat = Atoms2ChemicalKernelmat(atoms, chemicalKernel=chemicalKernel)
     else:
@@ -680,7 +688,7 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
     # get the soap for every local environement
     frames = get_Soaps(atoms, nocenters=nocenters, chem_channels=chem_channels, centerweight=centerweight,
                        gaussian_width=gaussian_width, cutoff=cutoff, cutoff_transition_width=cutoff_transition_width,
-                       nmax=nmax, lmax=lmax, nprocess=nprocess,
+                       nmax=nmax, lmax=lmax, nprocess=nprocess,chemicalProjection=chemicalProjection,
                        dispbar=dispbar,is_fast_average=is_fast_average)
 
     # get the environmental kernels as a dictionary

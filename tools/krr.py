@@ -88,7 +88,7 @@ class KRR(object):
         self.memory_eff = memory_eff
 
     def train(self,kernel,labels,sampleWeights=None):
-        '''Train the krr model with trainKernel and trainLabel. If sampleWeights are set then they are used.'''
+        '''Train the krr model with trainKernel and trainLabel. If sampleWeights are set then they are used as a multiplicative factor.'''
         nTrain, _ = kernel.shape
 
         # uses the sample weights from default or leave one out procedure

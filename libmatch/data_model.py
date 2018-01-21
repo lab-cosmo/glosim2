@@ -11,7 +11,8 @@ class AlchemySoap(MutableMapping):
     Container class for the soap vectors in their alchemy format.
 
     '''
-    def __init__(self ,qpatoms ,soapParams ,centerIdx ,nocenters=None,is_fast_average=False):
+    def __init__(self ,qpatoms ,soapParams ,centerIdx ,nocenters=None,
+                 is_fast_average=False):
         super(self.__class__, self).__init__()
         # keys is a list of all the possible key that are needed in the dictionary
         if nocenters is None:
@@ -167,6 +168,166 @@ class AlchemySoap(MutableMapping):
     def get_dense_values(self):
         values = np.asarray(self.values())
         return values
+    def get_dense_keys(self):
+        keys = np.asarray(self.keys())
+        return keys
+
+    def get_dense_arrays(self):
+        return self.get_dense_keys(), self.get_dense_values()
+
+    def __cmp__(self, dict):
+        return cmp(self._storage, dict)
+
+    def __contains__(self, item):
+        return item in self._storage
+
+    def __iter__(self):
+        for key in self.keys():
+            yield key
+
+    def __unicode__(self):
+        return unicode(repr(self._storage))
+
+
+class ProjectedAlchemySoap(MutableMapping):
+    '''
+    Container class for the soap vectors in their projected alchemy format.
+
+    '''
+
+    def __init__(self, alchemySoap,chemicalProjection):
+        super(self.__class__, self).__init__()
+        # keys is a list of all the possible key that are needed in the dictionary
+
+        self.chemicalProjection = chemicalProjection
+
+        self._allKeys = alchemySoap._allKeys
+
+        self._soapParams = alchemySoap._soapParams
+        self.dtype = np.float64
+
+        self.is_fast_average = alchemySoap._is_fast_average
+
+        nmax = self._soapParams['nmax']
+        lmax = self._soapParams['lmax']
+        self._Nsoap = nmax ** 2 * (lmax + 1)
+
+        self._frameIdx = alchemySoap._frameIdx
+        self._position = alchemySoap._position
+        self._atomic_number = alchemySoap._atomic_number
+        self._cell = alchemySoap._cell
+        self._chemical_symbol = alchemySoap._chemical_symbol
+        self._localEnvironementDict = alchemySoap._localEnvironementDict
+        self._info = alchemySoap._info
+
+        self._emptyKeys = ()
+        self._allKeys = chemicalProjection.keys()
+
+        self._alchemySoap = alchemySoap
+
+        self._storage = self.get_projected_alchemy(alchemySoap,chemicalProjection)
+
+    def get_projected_alchemy(self,alchemySoap,chemicalProjection):
+        projected_soap = dict()
+        for (I,J) in chemicalProjection.iterkeys():
+            projected_soap[(I,J)] = np.zeros((self._Nsoap,),dtype=self.dtype)
+            for (a,b),proj in chemicalProjection[(I,J)].iteritems():
+                if a == b:
+                    projected_soap[(I,J)] += proj * alchemySoap[(a,b)]
+                elif a > b:
+                    projected_soap[(I, J)] += 2 * proj * alchemySoap[(a, b)]
+                else:
+                    continue
+
+        return projected_soap
+
+    def update_projection(self,chemicalProjection):
+        self.alchemyProjection = chemicalProjection
+        self._storage = self.get_projected_alchemy(self._alchemySoap,chemicalProjection)
+
+
+    def __del__(self):
+        for values in self.__dict__.values():
+            del values
+
+    def get_upperKeys(self):
+        return self._allKeys
+
+    def get_allKeys(self):
+        return self._allKeys
+
+    def get_centerInfo(self):
+
+        if self.is_fast_average:
+            print 'fast average -> no center'
+        else:
+            from ase import Atoms as aseAtoms
+            info = {'z': self._atomic_number, 'position': self._position,
+                    'cell': self._cell, 'idx': self._frameIdx,
+                    'symbol': self._chemical_symbol, 'env': aseAtoms(**self._localEnvironementDict)}
+            info.update(**self._info)
+            return info
+
+    def get_localEnvironement(self):
+        if self.is_fast_average:
+            print 'fast average -> no center'
+        else:
+            from ase import Atoms as aseAtoms
+            return aseAtoms(**self._localEnvironementDict)
+
+    def get_filledKeys(self):
+        return self._allKeys
+
+    def get_emptyKeys(self):
+        return self._emptyKeys
+
+    def get_soapParams(self):
+        return self._soapParams
+
+    def __setitem__(self, key, item):
+        # asarray does not copy if the types are matching
+        self._storage[tuple(key)] = np.asarray(item, dtype=self.dtype)
+
+    def __getitem__(self, key):
+        return self._storage[tuple(key)]
+
+    def get(self, key, default=None):
+        return self[key]
+
+    def __repr__(self):
+        return repr(self._storage)
+
+    def __len__(self):
+        return len(self.keys())
+
+    def __delitem__(self, key):
+        skey = tuple(sorted(key))
+        del self._storage[skey]
+
+    def has_key(self, key):
+        skey = tuple(key)
+        return self._storage.has_key(skey)
+
+    def pop(self, key, d=None):
+        skey = tuple(key)
+        return self._storage.pop(skey, d)
+
+    def update(self, *args, **kwargs):
+        return self._storage.update(*args, **kwargs)
+
+    def keys(self):
+        return self._allKeys
+
+    def values(self):
+        return [self[key] for key in self.keys()]
+
+    def items(self):
+        return [(key, self[key]) for key in self.keys()]
+
+    def get_dense_values(self):
+        values = np.asarray(self.values())
+        return values
+
     def get_dense_keys(self):
         keys = np.asarray(self.keys())
         return keys

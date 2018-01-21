@@ -1,7 +1,7 @@
 import quippy as qp
 import numpy  as np
 from utils import get_spkit,get_spkitMax,envIdx2centerIdxMap
-from data_model import AlchemyFrame,AlchemySoap
+from data_model import AlchemyFrame,AlchemySoap,ProjectedAlchemySoap
 import multiprocessing as mp
 from libmatch.utils import is_notebook
 import os,signal,threading,psutil
@@ -12,6 +12,7 @@ else:
     from tqdm import tqdm as tqdm_cs
 
 def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None, centerweight=1., gaussian_width=0.5,cutoff=3.5,
+                      chemicalProjection=None,
                       cutoff_transition_width=0.5, nmax=8, lmax=6,chem_channels=True,is_fast_average=False,queue=None):
     if nocenters is None:
         nocenters = []
@@ -47,9 +48,12 @@ def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None,
             # with chemical channels.
             alchemySoapdict = Soap2AlchemySoap(rawsoaps[it, :], spkitMax, nmax, lmax)
 
-            alchemySoap = AlchemySoap(qpatoms=atoms, soapParams=soapParams, centerIdx=mm[it],is_fast_average=is_fast_average)
+            alchemySoap = AlchemySoap(qpatoms=atoms, soapParams=soapParams, centerIdx=mm[it],
+                                      is_fast_average=is_fast_average)
 
             alchemySoap.from_dict(alchemySoapdict)
+            if chemicalProjection is not None:
+                alchemySoap = ProjectedAlchemySoap(alchemySoap,chemicalProjection)
 
             centerZ = zList[mm[it]] if not is_fast_average else 'AVG'
             alchemyFrame[centerZ] = alchemySoap
@@ -128,7 +132,7 @@ class mp_soap(object):
 
 
 def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaussian_width=0.5, cutoff=3.5,
-              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None, nprocess=1,
+              cutoff_transition_width=0.5, nmax=8, lmax=6, spkitMax=None, nprocess=1,chemicalProjection=None,
               dispbar=False,is_fast_average=False):
     '''
     Compute the SOAP vectors for each atomic environment in atoms and
@@ -161,7 +165,7 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
     soapParams = [
         { 'spkit': get_spkit(frame), 'spkitMax': spkitMax,
          'nocenters': nocenters, 'is_fast_average': is_fast_average,
-         'chem_channels': chem_channels,
+         'chem_channels': chem_channels,'chemicalProjection':chemicalProjection,
          'centerweight': centerweight, 'gaussian_width': gaussian_width,
          'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
          'nmax': nmax, 'lmax': lmax} for frame in atoms]
