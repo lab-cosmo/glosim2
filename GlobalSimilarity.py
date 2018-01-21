@@ -256,8 +256,7 @@ if __name__ == '__main__':
 
     # Reduce the environemental kernels into global kernels
     globalKernel = get_globalKernel(environmentalKernels,kernel_type=global_kernel_type, zeta=zeta, gamma=gamma,
-                                    eps=1e-6, nthreads=8,is_fast_average=is_fast_average,
-                                    normalize_global_kernel=normalize_global_kernel)
+                                    eps=1e-6, nthreads=8,normalize_global_kernel=normalize_global_kernel)
 
     if global_kernel_type == 'average':
         print 'Compute global average kernel with zeta={} : done {}'.format(zeta, s2hms(time.time() - st))
