@@ -29,8 +29,9 @@ def plot_learning_curve(nTrains,scoreTest,err_scoreTest,Nfold,fout=None):
             if fout:
                 plt.savefig(fout,dpi=300,bbox_inches='tight')
 
-def LearningCurve(kernel,prop,params,nprocess=1,Nfold=4,train_fractions=np.linspace(0.1,0.9,8),seed=10,verbose=False):
-    nSet = kernel.shape[0]
+def LearningCurve(kernel,prop,params,nprocess=1,Nfold=4,nSet=None,train_fractions=np.linspace(0.1,0.9,8),seed=10,verbose=False):
+    if nSet is None:
+        nSet = kernel.shape[0]
 
     seeds = {f: npr.randint(0, 500, size=(int(it),)) for it, f in zip(np.linspace(50,10,len(train_fractions)), train_fractions)}
 
@@ -51,6 +52,8 @@ def LearningCurve(kernel,prop,params,nprocess=1,Nfold=4,train_fractions=np.linsp
 
 
 def point(kernel, prop, params, cv, Ntrain, seeds):
+    if isinstance(kernel,str):
+        kernel = np.load(kernel)
     score_outer_test = []
     score_outer_train = []
     for it, (train, test) in enumerate(cv.split(kernel)):
@@ -103,7 +106,8 @@ class mp_LC(object):
         if self.nprocess > 1:
             pool = Pool(self.nprocess, initializer=self.worker_init,
                         maxtasksperchild=1)
-            self.func_wrap(self.chunks[0])
+            #self.func_wrap(self.chunks[0])
+            #print '########'
             for Ntrain, res_test,res_train in pool.imap_unordered(self.func_wrap, self.chunks):
                 scores_test.append(np.mean(res_test,axis=0))
                 scores_train.append(np.mean(res_train,axis=0))
