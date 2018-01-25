@@ -64,10 +64,10 @@ def point(kernel, prop, params, cv, Ntrain, seeds):
             train_ids = r_train[:Ntrain]
             test_ids = test
 
-            ypred_test, ytrue_test, sc_test, ypred_train, ytrue_train, sc_train = \
+            ypred_val, ytrue_val, sc_val, ypred_train, ytrue_train, sc_train, model = \
                 validation(kernel, prop, train_ids, test_ids, params, verbose=False)
 
-            score_inner.append(sc_test)
+            score_inner.append(sc_val)
             score_inner_train.append(sc_train)
 
         score_outer_test.append(np.mean(score_inner, axis=0))
