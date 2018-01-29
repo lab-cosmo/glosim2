@@ -106,8 +106,7 @@ class mp_LC(object):
         if self.nprocess > 1:
             pool = Pool(self.nprocess, initializer=self.worker_init,
                         maxtasksperchild=1)
-            #self.func_wrap(self.chunks[0])
-            #print '########'
+
             for Ntrain, res_test,res_train in pool.imap_unordered(self.func_wrap, self.chunks):
                 scores_test.append(np.mean(res_test,axis=0))
                 scores_train.append(np.mean(res_train,axis=0))
