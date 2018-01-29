@@ -103,7 +103,7 @@ class KRR(object):
         reg = np.multiply(
             np.divide(np.multiply(self.sigma ** 2, np.mean(diag)), np.var(trainLabel)),
             sampleWeights)
-
+        self.reg = reg
         if self.memory_eff:
             # kernel is modified here
 
