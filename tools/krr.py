@@ -51,7 +51,7 @@ def prediction(kernel_train,kernel_test, prop_train,prop_test, params, verbose=F
         print 'Train MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train)
         print 'TEST MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_test)
 
-    return ypred_test, ytrue_test, sc_test, ypred_train, ytrue_train, sc_train
+    return ypred_test, ytrue_test, sc_test, ypred_train, ytrue_train, sc_train,model
 
 
 
