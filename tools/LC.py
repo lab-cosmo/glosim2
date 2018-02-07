@@ -33,7 +33,7 @@ def LearningCurve(kernel,prop,params,nprocess=1,Nfold=4,nSet=None,train_fraction
     if nSet is None:
         nSet = kernel.shape[0]
 
-    seeds = {f: npr.randint(0, 500, size=(int(it),)) for it, f in zip(np.linspace(50,10,len(train_fractions)), train_fractions)}
+    seeds = {f: npr.randint(0, 500, size=(int(it),)) for it, f in zip(np.linspace(15,5,len(train_fractions)), train_fractions)}
 
     cv = KFold(n_splits=Nfold, shuffle=True, random_state=seed)
     chunks = []
