@@ -163,6 +163,7 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
         spkitMax = get_spkitMax(atoms)
 
     soapParams = []
+    not_considered = []
     for it,frame in enumerate(atoms):
         ## if the frame is empty because of the nocenters then don't add it to the computation
         ## the frame/fingerprint ordering will be changed
@@ -184,8 +185,10 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
                 soapParam.update(**{'atoms': frame})
             soapParams.append(soapParam)
         else:
-            print 'frame {} does not contain centers'.format(it)
-
+            not_considered.append(it)
+            #print 'frame {} does not contain centers'.format(it)
+    if len(not_considered)>0:
+        print 'frames\n {} \ndo not contain centers'.format(not_considered)
     compute_soaps = mp_soap(soapParams,nprocess,dispbar=dispbar)
 
     Frames = compute_soaps.run()
