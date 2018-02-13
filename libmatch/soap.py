@@ -162,13 +162,20 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
     if spkitMax is None:
         spkitMax = get_spkitMax(atoms)
 
-    soapParams = [
-        { 'spkit': get_spkit(frame), 'spkitMax': spkitMax,
-         'nocenters': nocenters, 'is_fast_average': is_fast_average,
-         'chem_channels': chem_channels,'chemicalProjection':chemicalProjection,
-         'centerweight': centerweight, 'gaussian_width': gaussian_width,
-         'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
-         'nmax': nmax, 'lmax': lmax} for frame in atoms]
+    soapParams = []
+    for frame in atoms:
+        spkit = get_spkit(frame)
+        sps = spkit.keys()
+        intersec = list(set(sps).difference(nocenters))
+        if len(intersec) > 0:
+            soapParams.append(
+                { 'spkit': spkit , 'spkitMax': spkitMax,
+                 'nocenters': nocenters, 'is_fast_average': is_fast_average,
+                 'chem_channels': chem_channels,'chemicalProjection':chemicalProjection,
+                 'centerweight': centerweight, 'gaussian_width': gaussian_width,
+                 'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
+                 'nmax': nmax, 'lmax': lmax}
+            )
 
     if nprocess > 1:
         for soapParam,frame in zip(soapParams,atoms):
