@@ -163,26 +163,28 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
         spkitMax = get_spkitMax(atoms)
 
     soapParams = []
-    for frame in atoms:
+    for it,frame in enumerate(atoms):
+        ## if the frame is empty because of the nocenters then don't add it to the computation
+        ## the frame/fingerprint ordering will be changed
         spkit = get_spkit(frame)
         sps = spkit.keys()
         intersec = list(set(sps).difference(nocenters))
         if len(intersec) > 0:
-            soapParams.append(
+            soapParam = \
                 { 'spkit': spkit , 'spkitMax': spkitMax,
                  'nocenters': nocenters, 'is_fast_average': is_fast_average,
                  'chem_channels': chem_channels,'chemicalProjection':chemicalProjection,
                  'centerweight': centerweight, 'gaussian_width': gaussian_width,
                  'cutoff': cutoff, 'cutoff_transition_width': cutoff_transition_width,
                  'nmax': nmax, 'lmax': lmax}
-            )
 
-    if nprocess > 1:
-        for soapParam,frame in zip(soapParams,atoms):
-            soapParam.update(**{'fpointer': frame._fpointer.copy()})
-    elif nprocess == 1:
-        for soapParam, frame in zip(soapParams, atoms):
-            soapParam.update(**{'atoms': frame})
+            if nprocess > 1:
+                soapParam.update(**{'fpointer': frame._fpointer.copy()})
+            elif nprocess == 1:
+                soapParam.update(**{'atoms': frame})
+            soapParams.append(soapParam)
+        else:
+            print 'frame {} does not contain centers'.format(it)
 
     compute_soaps = mp_soap(soapParams,nprocess,dispbar=dispbar)
 
