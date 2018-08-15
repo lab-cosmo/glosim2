@@ -8,7 +8,7 @@
 #### Python
 
 ```
-pip install numpy ase numba tqdm psutils
+pip install numpy ase numba tqdm psutil
 ```
 
 Optional:
