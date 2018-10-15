@@ -32,6 +32,10 @@ test/*
 *.log
 *.sql
 *.sqlite
+*.idea
+*.vsc
+*__pycache__
+test
 
 # OS generated files #
 ######################
