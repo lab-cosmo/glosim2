@@ -151,7 +151,7 @@ def get_localEnv(frame, centerIdx, cutoff,onlyDict=False):
 
     n = len(atoms.get_atomic_numbers())
     nl = NeighborList([cutoff / 2., ] * n, skin=0., sorted=False, self_interaction=False, bothways=True)
-    nl.build(atoms)
+    nl.update(atoms)
 
     cell = atoms.get_cell()
     pbc = atoms.get_pbc()
