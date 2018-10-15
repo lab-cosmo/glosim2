@@ -8,6 +8,11 @@
 *.so
 *.pyc
 
+*__pycache__
+*.idea
+*.ipynb_checkpoints
+*.ipynb 
+test/*
 
 # Packages #
 ############
