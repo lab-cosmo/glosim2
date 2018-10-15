@@ -22,7 +22,7 @@ try:
     signatureEnv = 'void(double[:, :], uint32[:, :], double[:, :, :], ' \
                    'uint32[:, :], double[:, :, :], double[:, :])'
 
-    @nb.jit(signatureEnv, nopython=True, nogil=True, cache=True)
+    @nb.njit(signatureEnv,parallel=True)
     def nb_frameprod_upper(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
         '''
         Computes the environmental matrix between two AlchemyFrame. Only the upper
@@ -37,8 +37,8 @@ try:
         '''
         Nenv1, nA, nL = vals1.shape
         Nenv2, nB, nL = vals2.shape
-        for it in range(Nenv1):
-            for jt in range(Nenv2):
+        for it in nb.prange(Nenv1):
+            for jt in nb.prange(Nenv2):
                 EnvironmentalSimilarity = 0.
                 for nt in range(nA):
                     spA = keys1[nt, :]
@@ -67,7 +67,7 @@ try:
                 result[it, jt] = EnvironmentalSimilarity
 
 
-    @nb.jit(signatureEnv, nopython=True, nogil=True, cache=True)
+    @nb.njit(signatureEnv,parallel=True)
     def nb_frameprod_upper_delta(result, keys1, vals1, keys2, vals2, chemicalKernelmat):
 
         Nenv1, nA, nL = vals1.shape
@@ -75,7 +75,7 @@ try:
 
         mm = np.zeros((nA,), np.int32)
         union = np.zeros((nA, 2), np.int32)
-        for it in range(nA):
+        for it in nb.prange(nA):
             isUnion = False
             for jt in range(nB):
                 if keys1[it][0] == keys2[jt][0] and keys1[it][1] == keys2[jt][1]:
@@ -87,8 +87,8 @@ try:
                 union[it][0] = keys1[it][0]
                 union[it][1] = keys1[it][1]
 
-        for it in range(Nenv1):
-            for jt in range(Nenv2):
+        for it in nb.prange(Nenv1):
+            for jt in nb.prange(Nenv2):
                 EnvironmentalSimilarity = 0.
 
                 for nt in range(nA):
