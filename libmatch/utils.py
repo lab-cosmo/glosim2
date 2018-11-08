@@ -190,7 +190,12 @@ def chunk_list(lll, nchunks):
     return chunks, slices
 
 
-def chunks1d_2_chuncks2d(chunk_1d, **kargs):
+def chunks1d_2_chuncks2d(chunk_1d,chunk_1d_1=None, **kargs):
+    if chunk_1d_1 is None:
+        diag = True
+        chunk_1d_1 = chunk_1d
+    else:
+        diag = False
 
     if isinstance(chunk_1d[0], qp.io.AtomsList):
         key = ['atoms1', 'atoms2']
@@ -201,18 +206,25 @@ def chunks1d_2_chuncks2d(chunk_1d, **kargs):
     chunks = []
     iii = 0
     for nt, ch1 in enumerate(chunk_1d):
-        for mt, ch2 in enumerate(chunk_1d):
-            if nt > mt:
-                continue
-            if nt < mt:
-                aa = {key[0]: ch1, key[1]: ch2}
-                # bb = kargs
-                aa.update(**kargs)
-                # chunks.append(deepcopy(aa))
-                chunks.append(aa)
+        for mt, ch2 in enumerate(chunk_1d_1):
+            if diag is True:
+                if nt > mt:
+                    continue
+                if nt < mt:
+                    aa = {key[0]: ch1, key[1]: ch2}
+                    # bb = kargs
+                    aa.update(**kargs)
+                    # chunks.append(deepcopy(aa))
+                    chunks.append(aa)
 
-            elif nt == mt:
-                aa = {key[0]: ch1, key[1]: None}
+                elif nt == mt:
+                    aa = {key[0]: ch1, key[1]: None}
+                    # bb = kargs
+                    aa.update(**kargs)
+                    # chunks.append(deepcopy(aa))
+                    chunks.append(aa)
+            else:
+                aa = {key[0]: ch1, key[1]: ch2}
                 # bb = kargs
                 aa.update(**kargs)
                 # chunks.append(deepcopy(aa))

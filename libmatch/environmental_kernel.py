@@ -555,34 +555,46 @@ class mp_framesprod(object):
         signal.signal(signal.SIGINT, sig_int)
 
 
-def join_envKernel(results, slices):
-    rr = list(set([it for sl in slices for it in sl]))
-    joined_results = {(it, jt): None for it in rr for jt in rr if jt >= it}
+def join_envKernel(results, slices,slices_1=None):
+    if slices_1 is None:
+        slices_1 = slices
+        diag = True
+        rr = list(set([it for sl in slices for it in sl]))
+        joined_results = {(it, jt): None for it in rr for jt in rr if jt >= it}
+    else:
+        diag = False
+        rr1 = list(set([it for sl in slices for it in sl]))
+        rr2 = list(set([it for sl in slices_1 for it in sl]))
+        joined_results = {(it, jt): None for it in rr1 for jt in rr2}
 
     iii = 0
     for nt, sl1 in enumerate(slices):
-        for mt, sl2 in enumerate(slices):
-            if nt > mt:
-                continue
+        for mt, sl2 in enumerate(slices_1):
+            if diag is True:
+                if nt > mt:
+                    continue
 
-            if np.all(sl1 == sl2):
+                if np.all(sl1 == sl2):
+                    for it, s1 in enumerate(sl1):
+                        for jt, s2 in enumerate(sl2):
+                            if s1 > s2:
+                                continue
+                            try:
+                                joined_results[(s1, s2)] = results[iii][(it, jt)]
+                            except:
+                                print s1, s2, it, jt
+                else:
 
-                for it, s1 in enumerate(sl1):
-                    for jt, s2 in enumerate(sl2):
-                        if s1 > s2:
-                            continue
-                        try:
-                            joined_results[(s1, s2)] = results[iii][(it, jt)]
-                        except:
-                            print s1, s2, it, jt
+                    for it, s1 in enumerate(sl1):
+                        for jt, s2 in enumerate(sl2):
+                            try:
+                                joined_results[(s1, s2)] = results[iii][(it, jt)]
+                            except:
+                                print s1, s2, it, jt
             else:
-
                 for it, s1 in enumerate(sl1):
-                    for jt, s2 in enumerate(sl2):
-                        try:
+                        for jt, s2 in enumerate(sl2):
                             joined_results[(s1, s2)] = results[iii][(it, jt)]
-                        except:
-                            print s1, s2, it, jt
 
             iii += 1
     return joined_results
