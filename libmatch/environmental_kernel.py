@@ -112,44 +112,6 @@ except:
     nonumba = True
 
 
-# def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None):
-#     '''
-#     Computes the environmental matrices between two list of AlchemyFrame.
-#
-#     :param frames1: list of AlchemyFrame.
-#     :param frames2: list of AlchemyFrame.
-#     :param chemicalKernelmat:
-#     :param frameprodFunc: function to use to compute a environmental kernel matrix
-#     :return: dictionary of environmental kernel matrices -> (i,j):environmentalMatrix(frames1[i],frames2[j])
-#     '''
-#     envkernels = {}
-#     if frames2 is None:
-#         # when with itself only the upper global matrix is computed
-#         frames2 = frames1
-#         for it, frame1 in enumerate(frames1):
-#             keys1, vals1 = frame1.get_arrays()
-#             for jt, frame2 in enumerate(frames2):
-#                 if it > jt:
-#                     continue
-#                 keys2, vals2 = frame2.get_arrays()
-#                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-#                          'chemicalKernelmat': chemicalKernelmat}
-#                 envkernels[(it, jt)] = frameprodFunc(**kargs)
-#
-#
-#     else:
-#         for it, frame1 in enumerate(frames1):
-#             keys1, vals1 = frame1.get_arrays()
-#             for jt, frame2 in enumerate(frames2):
-#                 keys2, vals2 = frame2.get_arrays()
-#                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-#                          'chemicalKernelmat': chemicalKernelmat}
-#                 envkernels[(it, jt)] = frameprodFunc(**kargs)
-#
-#     return envkernels
-
-
-
 def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None, queue=None,dispbar=False):
     '''
     Computes the environmental matrices between two list of AlchemyFrame.
@@ -160,7 +122,6 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
     :param frameprodFunc: function to use to compute a environmental kernel matrix
     :return: dictionary of environmental kernel matrices -> (i,j):environmentalMatrix(frames1[i],frames2[j])
     '''
-
 
     if queue is None:
         if frames2 is None:
@@ -189,7 +150,6 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
 
                 queue.put(1)
     else:
-
         for it, frame1 in enumerate(frames1):
             keys1, vals1 = frame1.get_arrays()
             # ii = 0
@@ -202,40 +162,6 @@ def framesprod(frames1, frames2=None, chemicalKernelmat=None, frameprodFunc=None
                 queue.put(1)
     return envkernels
 
-    # if frames2 is None:
-    #     # when with itself only the upper global matrix is computed
-    #     frames2 = frames1
-    #     n = len(frames1)
-    #     with tqdm_cs(total=int(n*(n-1)/2.),desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=ascii,disable=disable_pbar) as pbar:
-    #         for it, frame1 in enumerate(frames1):
-    #             keys1, vals1 = frame1.get_arrays()
-    #             ii = 0
-    #             for jt, frame2 in enumerate(frames2):
-    #                 if it > jt:
-    #                     continue
-    #                 keys2, vals2 = frame2.get_arrays()
-    #                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-    #                          'chemicalKernelmat': chemicalKernelmat}
-    #                 envkernels[(it, jt)] = frameprodFunc(**kargs)
-    #                 ii += 1
-    #             pbar.update(ii)
-    #             queue.put(ii)
-    # else:
-    #     n1 = len(frames1)
-    #     n2 = len(frames2)
-    #     with tqdm_cs(total=int(n1*n2), desc='Process {}'.format(proc_id),leave=True,position=pos,ascii=True,disable=disable_pbar) as pbar:
-    #         for it, frame1 in enumerate(frames1):
-    #             keys1, vals1 = frame1.get_arrays()
-    #             ii = 0
-    #             for jt, frame2 in enumerate(frames2):
-    #                 keys2, vals2 = frame2.get_arrays()
-    #                 kargs = {'keys1': keys1, 'keys2': keys2, 'vals1': vals1, 'vals2': vals2,
-    #                          'chemicalKernelmat': chemicalKernelmat}
-    #                 envkernels[(it, jt)] = frameprodFunc(**kargs)
-    #                 ii += 1
-    #             pbar.update(ii)
-    #             queue.put(ii)
-    # return envkernels
 
 def nb_frameprod_upper_multithread(**kargs):
     Nenv1, nA, nL = kargs['vals1'].shape
@@ -401,7 +327,7 @@ def choose_envKernel_func(nthreads=4, isDeltaKernel=False,verbose=False):
     '''
     Compile with numba the nb_frameprod_upper function.
 
-    :param isDeltaKernel: 
+    :param isDeltaKernel:
     :param nthreads: int. Number of threads each of which computes a block of the environmental matrix
     :return: Compiled inner_func_nbupper function with threads
     '''
@@ -412,29 +338,30 @@ def choose_envKernel_func(nthreads=4, isDeltaKernel=False,verbose=False):
         if verbose:
             print 'Using compiled and threaded version of envKernel function'
 
-        if nthreads == 1:
+        # if nthreads == 1:
+        if verbose:
+            print('1 threaded calc')
+        if isDeltaKernel:
             if verbose:
-                print('1 threaded calc')
-            if isDeltaKernel:
-                if verbose:
-                    print 'with implicit delta kernel function'
-                get_envKernel = nb_frameprod_upper_delta_singlethread
-            else:
-                if verbose:
-                    print 'with explicit delta kernel function'
-                get_envKernel = nb_frameprod_upper_singlethread
-        elif nthreads in [2,4,6,9,12,16,25,36,48,64,81,100]:
-            if verbose:
-                print('{:.0f} threaded calc'.format(nthreads))
-            if isDeltaKernel:
-                if verbose:
-                    print 'with implicit delta kernel function'
-                get_envKernel = nb_frameprod_upper_delta_multithread
-            else:
-                get_envKernel = nb_frameprod_upper_multithread
+                print 'with implicit delta kernel function'
+            get_envKernel = nb_frameprod_upper_delta_singlethread
         else:
-            print('Unsuported nthreads number\n 1 threaded calc')
+            if verbose:
+                print 'with explicit delta kernel function'
             get_envKernel = nb_frameprod_upper_singlethread
+        # TODO understand why it does not work well now
+        # elif nthreads in [2,4,6,9,12,16,25,36,48,64,81,100]:
+        #     if verbose:
+        #         print('{:.0f} threaded calc'.format(nthreads))
+        #     if isDeltaKernel:
+        #         if verbose:
+        #             print 'with implicit delta kernel function'
+        #         get_envKernel = nb_frameprod_upper_delta_multithread
+        #     else:
+        #         get_envKernel = nb_frameprod_upper_multithread
+        # else:
+        #     print('Unsuported nthreads number\n 1 threaded calc')
+        #     get_envKernel = nb_frameprod_upper_singlethread
 
     return get_envKernel
 
@@ -445,7 +372,6 @@ def framesprod_wrapper(kargs):
     queue = kargs.pop('queue')
     # to disable the progressbar
     dispbar = kargs.pop('dispbar')
-
     if 'fpointers1' in keys:
         fpointers1 = kargs.pop('fpointers1')
         fpointers2 = kargs.pop('fpointers2')
@@ -506,7 +432,6 @@ class mp_framesprod(object):
         self.func = framesprod_wrapper
         self.parent_id = os.getpid()
         self.get_envKernel = choose_envKernel_func(nthreads,isDeltaKernel)
-
         self.nprocess = nprocess
         self.nthreads = nthreads
         self.dispbar = dispbar

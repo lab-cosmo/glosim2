@@ -11,7 +11,7 @@
 *__pycache__
 *.idea
 *.ipynb_checkpoints
-*.ipynb 
+Untitled*.ipynb
 test/*
 
 # Packages #

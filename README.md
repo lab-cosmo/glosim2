@@ -21,7 +21,7 @@ pip install seaborn mpi4py scikit-learn
 
 QUIP code (http://libatoms.github.io/QUIP/index.html)
 
-+ Download the GAP code from http://www.libatoms.org/gap/gap_download.html 
++ Download the GAP code from http://www.libatoms.org/gap/gap_download.html
 
 + Follow the installation instructions of QUIP http://libatoms.github.io/QUIP/install.html. During the configuration enable GAP support and copy the GAP folder form the previous point in the QUIP/src/ folder before compilation.
 
@@ -30,3 +30,7 @@ QUIP code (http://libatoms.github.io/QUIP/index.html)
 ## Organisation of the code
 
 The main functionality of the package are exposed in GlobalSimilarity.py and GlobalSim_cluster.py is an attempt to make a robust parallelization using mpi4py library.
+
+## Examples
+
+An example on how to use the library in several scenarios can be found as a jupyter notebook in the examples folder.

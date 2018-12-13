@@ -3,9 +3,36 @@ import numpy as np
 from scipy.stats.mstats import spearmanr
 from sklearn.metrics import r2_score
 from scipy.linalg import cho_solve,cho_factor
+import json
 
 # to import from libmatch
 sys.path.insert(0,os.path.dirname(os.path.realpath(__file__))+'/..')
+
+def dump_json(fn,data):
+    with open(fn,'w') as f:
+        json.dump(data,f,sort_keys=True,indent=2)
+
+def load_json(fn):
+    with open(fn,'r') as f:
+        data = json.load(f)
+    return data
+
+def dump_data(fn,metadata,data,is_sparse=False,compressed=False):
+    data_fn = os.path.join(os.path.dirname(fn),metadata['fn'])
+    if is_sparse is False:
+        np.save(data_fn,data)
+    else:
+        save_npz(data_fn,data,compressed=compressed)
+    dump_json(fn,metadata)
+
+def load_data(fn,mmap_mode='r',is_sparse=False):
+    metadata = load_json(fn)
+    data_fn = os.path.join(os.path.dirname(fn),metadata['fn'])
+    if is_sparse is False:
+        data = np.load(data_fn,mmap_mode=mmap_mode)
+    else:
+        data = load_npz(data_fn)
+    return metadata,data
 
 
 def validation(kernel, prop, train_ids, validation_ids, params, verbose=False):
@@ -72,31 +99,28 @@ def dummy(a):
     return a
 
 class KRR(object):
-    def __init__(self,sigma,csi,sampleWeights=None,func=None,invfunc=None,memory_eff=False):
+    def __init__(self,sigma=None,csi=None,sampleWeights=None,memory_eff=False):
 
         self.sigma = sigma
         self.csi = csi
-        if func is None or invfunc is None:
-            self.func = dummy
-            self.invfunc = dummy
-        else:
-            self.func = func
-            self.invfunc = invfunc
+
         # Weights of the krr model
         self.alpha = None
-
+        self.sampleWeights = sampleWeights
         self.memory_eff = memory_eff
 
-    def train(self,kernel,labels,sampleWeights=None):
+    def train(self,kernel,labels):
         '''Train the krr model with trainKernel and trainLabel. If sampleWeights are set then they are used as a multiplicative factor.'''
         nTrain, _ = kernel.shape
 
         # uses the sample weights from default or leave one out procedure
-        if sampleWeights is None:
+        if self.sampleWeights is None:
             sampleWeights = np.ones((nTrain,))
+        else:
+            sampleWeights = np.array(self.sampleWeights)
 
         # learn a function of the label
-        trainLabel = self.func(labels)
+        trainLabel = labels
 
         diag = kernel.diagonal().copy()
         self.lower = False
@@ -124,16 +148,44 @@ class KRR(object):
         '''kernel.shape is expected as (nTrain,nPred)'''
         if self.memory_eff:
             # kernel is modified in place here
-            return self.invfunc(np.dot(self.alpha, np.power(kernel,self.csi,out=kernel) ) ).reshape((-1))
+            return np.dot(self.alpha, np.power(kernel,self.csi,out=kernel)).reshape((-1))
         else:
             # kernel is not modified here
-            return self.invfunc(np.dot(self.alpha, np.power(kernel,self.csi) ) ).reshape((-1))
+            return np.dot(self.alpha, np.power(kernel,self.csi) ).reshape((-1))
+
+    def get_params(self):
+        state = dict(
+            sigma=self.sigma,
+            csi=self.csi,
+            memory_eff=self.memory_eff,
+        )
+        if self.sampleWeights is None:
+            state['sampleWeights'] = None
+        else:
+            state['sampleWeights'] = self.sampleWeights.tolist()
+        return state
+    def set_params(self,params):
+        self.sigma = params['sigma']
+        self.csi = params['csi']
+        if params['sampleWeights'] is None:
+            self.sampleWeights = None
+        else:
+            self.sampleWeights = np.array(params['sampleWeights'])
+        self.memory_eff = params['memory_eff']
+
+    def pack(self):
+        params = self.get_params()
+        data = dict(alpha=self.alpha.tolist())
+        state = dict(data=data,
+                     params=params)
+        return state
+    def unpack(self,state):
+        self.set_params(state['params'])
+        self.alpha = np.array(state['data']['alpha'])
+        return self
 
 
-
-
-
-#################### TEST FOR EFFICIENCY ##########################
+####################  ##########################
 def func(N):
     np.random.seed(10)
     X = np.random.rand(N,1000)

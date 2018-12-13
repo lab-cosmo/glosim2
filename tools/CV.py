@@ -6,7 +6,7 @@ import argparse
 # to import from libmatch
 sys.path.insert(0,os.path.dirname(os.path.realpath(__file__))+'/..')
 
-def CrossValidation(kernel,prop,params,Nfold=4,seed=10,verbose=False):
+def CrossValidation(kernel,prop,params,Nfold=4,seed=10):
     y = prop.reshape((-1, 1))
     cv = KFold(n_splits=Nfold, shuffle=True, random_state=seed)
 
@@ -26,14 +26,6 @@ def CrossValidation(kernel,prop,params,Nfold=4,seed=10,verbose=False):
 
     scoreTest = np.mean(inner_score, axis=0)
     err_scoreTest = np.std(inner_score, axis=0)
-
-    if verbose:
-        vv = []
-        from uncertainties import ufloat
-        for m, s in zip(scoreTest, err_scoreTest):
-            vv.append(ufloat(m, s))
-        print '{:.1uL} & {:.1uL} & {:.1uL} & {:.1uL} & {:.1uL} '.format(vv[0], vv[1], vv[2], vv[3], vv[4]).replace(
-            '\pm', '$\pm$')
 
     return scoreTest, err_scoreTest
 
