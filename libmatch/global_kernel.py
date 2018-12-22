@@ -26,8 +26,12 @@ def avgKernel(envKernelDict,zeta):
 
     for key,envKernel in envKernelDict.iteritems():
         Similarity[key[0],key[1]] = np.power(envKernel,zeta).mean()
-    diag = np.diag(Similarity)
-    return Similarity + Similarity.T - np.diag(diag)
+
+    if N == M:
+        diag = np.diag(Similarity)
+        return Similarity + Similarity.T - np.diag(diag)
+    else:
+        return Similarity
 
 def rematchKernel(envKernelDict, gamma=2., eps=1e-6, nthreads=8):
     '''
