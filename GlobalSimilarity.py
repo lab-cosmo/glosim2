@@ -42,8 +42,8 @@ def get_globalKernel(environmentalKernels,kernel_type='average',zeta=2,gamma=1.,
         raise ValueError('This kernel type: {}, does not exist.'.format(kernel_type))
 
     # Normalize the global kernel
-    if normalize_global_kernel:
-        globalKernel = normalizeKernel(globalKernel)
+    if normalize_global_kernel is not False:
+        globalKernel = normalizeKernel(globalKernel,normalize_global_kernel)
 
     return globalKernel
 
@@ -54,9 +54,9 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
                              nthreads=4, nprocess=2, nchunks = 2,islow_memory=False,dispbar=False):
     '''
     Compute the environmental kernels for every atoms (frame) pairs. Wrapper function around several setup.
-    
+
     :param atoms: AtomsList object from LibAtoms library. List of atomic configurations.
-    :param nocenters: 
+    :param nocenters:
     :param chem_channels:
     :param centerweight: Center atom weight
     :param gaussian_width: Atom Gaussian std
@@ -98,7 +98,7 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
               'chemicalProjection':chemicalProjection,
               'chem_channels': True ,'nocenters': nocenters,'is_fast_average':is_fast_average,
                    }
-    
+
     if nchunks == 1:
         kargs = {'nthreads':nthreads,'nprocess':nprocess,'isDeltaKernel':isDeltaKernel,
                  'dispbar':dispbar}
@@ -112,7 +112,7 @@ def get_environmentalKernels(atoms, nocenters=None, chem_channels=True, centerwe
 
 
         environmentalKernels = get_environmentalKernels_mt_mp_chunks(**kargs)
-        
+
     return environmentalKernels
 
 

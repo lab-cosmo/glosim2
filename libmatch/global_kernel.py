@@ -184,7 +184,7 @@ def np_rematch(envKernel, gamma, eps=1e-6):
         rval += u[it] * rrow
     return rval
 
-def normalizeKernel(kernel):
+def normalizeKernel(kernel,nomralization_diagonal):
     '''
     Normalize a kernel matrix.
 
@@ -192,9 +192,17 @@ def normalizeKernel(kernel):
     :return: np.array. a copy of the normalized kernel
     '''
     n,m = kernel.shape
-    kk = kernel.copy()
-    # needs to copy here to avoid pointer side effects
-    diag = np.diag(kk).copy()
-    for it in range(n):
-        kk[it,:] /= np.sqrt(diag[it] * diag)
-    return kk
+    if n == m:
+        # needs to copy here to avoid pointer side effects
+        diag = np.diag(kernel).copy()
+        for it in range(n):
+            kernel[it,:] /= np.sqrt(diag[it] * diag)
+
+    else:
+        diag_n = nomralization_diagonal[0]
+        diag_m = nomralization_diagonal[1]
+        for ii in range(n):
+            for jj in range(m):
+                kernel[ii,jj] /= np.sqrt(diag_n[ii] * diag_m[jj])
+
+    return kernel
