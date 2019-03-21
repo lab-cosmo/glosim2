@@ -16,12 +16,12 @@ def func(command):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="""Computes the Global average/rematch kernel. Needs MPI to run, 
+    parser = argparse.ArgumentParser(description="""Computes the Global average/rematch kernel. Needs MPI to run,
     mpiexec -n 4 python  """)
 
     parser.add_argument("filename", nargs=1, help="Name of the LibAtom formatted xyz input file")
-    parser.add_argument("-pe", "--path-to-executable", type=str, default="/home/musil/git/glosim2/",
-                        help="Path to the executable that runs, i.e. GlobalSimilarity_cluster.py")
+    # parser.add_argument("-pe", "--path-to-executable", type=str, default="/home/musil/git/glosim2/",
+    #                     help="Path to the executable that runs, i.e. GlobalSimilarity_cluster.py")
     parser.add_argument("-n", type=int, default=8, help="Number of radial functions for the descriptor")
     parser.add_argument("-l", type=int, default=6, help="Maximum number of angular functions for the descriptor")
     parser.add_argument("-c", type=float, default=3.5, help="Radial cutoff")
@@ -75,7 +75,9 @@ if __name__ == '__main__':
     first = args.first if args.first>0 else None
     last = args.last if args.last>0 else None
 
-    path_to_executable = args.path_to_executable
+    # assumes GlobalSimilarity_cluster.py is still in the same folder
+    # as GlobalSim_cluster.py
+    path_to_executable = os.path.dirname(os.path.realpath(__file__))
 
     if args.outformat in ['text','pickle']:
         outformat = args.outformat
@@ -153,25 +155,28 @@ if __name__ == '__main__':
     print 'TMP output is in ' + tmp_path
     os.makedirs(tmp_path)
 
-
-
     fn_env_kernels = [tmp_path+name+'-{xf},{xl}-{yf},{yl}'.format(xf=xsl[0],xl=xsl[1],yf=ysl[0],yl=ysl[1])
                       +soap_params + '-env_kernels.pck'
                       for xsl in xslices for ysl in yslices  if ysl[0] >= xsl[0]]
+    command_str = ['export OMP_NUM_THREADS={nthreads}; '
+                'python {path2exec} {filename} ' ,
+                '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' ,
+                '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} ' ,
+                '-nt 1 -np {nprocess} -nc 1 --xlim {xf},{xl} --ylim {yf},{yl}  ' ,
+                '--prefix {prefix}{name}-{xf},{xl}-{yf},{yl} -sek ' ,
+                ]
+    if len(nocenters) > 0:
+        command_str.append(' --nocenters {nocenters} '.format(nocenters=args.nocenters))
+    command_str.append(' 2>&1 | tee {prefix}log-{xf},{xl}-{yf},{yl} >/dev/null ')
+    command_str = ' '.join(command_str)
 
     path2GlobSim = path_to_executable+'GlobalSimilarity_cluster.py'
-    commands = ['python {path2exec} {filename} ' \
-                '-n {nmax} -l {lmax} -c {cutoff} -g {gaussian_width} -cw {centerweight} ' \
-                '-cotw {cutoff_transition_width} -z {zeta} -gm {gamma} ' \
-                '--nocenters {nocenters} ' \
-                '-nt {nthreads} -np {nprocess} -nc 1 --xlim {xf},{xl} --ylim {yf},{yl}  ' \
-                '--prefix {prefix}{name}-{xf},{xl}-{yf},{yl} -sek ' \
-                '2>&1 | tee {prefix}log-{xf},{xl}-{yf},{yl} >/dev/null'
-                .format(path2exec=path2GlobSim,filename=filename,nmax=nmax,lmax=lmax,cutoff=cutoff,
+    commands = [command_str.format(path2exec=path2GlobSim,filename=filename,
+                        nmax=nmax,lmax=lmax,cutoff=cutoff,
                         gaussian_width=gaussian_width,centerweight=centerweight,
                         cutoff_transition_width=cutoff_transition_width,
-                        zeta=zeta,gamma=gamma,nocenters=args.nocenters,
-                        nthreads=nthreads,nprocess=nprocess,
+                        zeta=zeta,gamma=gamma,
+                        nthreads=nthreads,nprocess=1,
                         xf=xsl[0], xl=xsl[1], yf=ysl[0], yl=ysl[1],
                         prefix=tmp_path,name=name)
                 for xsl in xslices for ysl in yslices if ysl[0] >= xsl[0]

@@ -32,7 +32,7 @@ except:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="""Computes the Environmental SOAP kernels.""")
+    parser = argparse.ArgumentParser(description="""Computes the Environmental SOAP kernels. Note that this script is not meant to be used on its own.""")
 
     parser.add_argument("filename", nargs=1, help="Name of the LibAtom formatted xyz input file")
     parser.add_argument("-n", type=int, default=8, help="Number of radial functions for the descriptor")
