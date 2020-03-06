@@ -53,8 +53,8 @@ def validation(kernel, prop, train_ids, validation_ids, params, verbose=False):
     sc_val = score(ypred_val, ytrue_val)
 
     if verbose:
-        print 'TRAIN MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train)
-        print 'VALIDATION MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_val)
+        print('TRAIN MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train))
+        print('VALIDATION MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_val))
 
     return ypred_val,ytrue_val,sc_val,ypred_train,ytrue_train,sc_train,model
 
@@ -75,8 +75,8 @@ def prediction(kernel_train,kernel_test, prop_train,prop_test, params, verbose=F
     sc_test = score(ypred_test, ytrue_test)
 
     if verbose:
-        print 'Train MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train)
-        print 'TEST MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_test)
+        print('Train MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_train))
+        print('TEST MAE={:.3e} RMSE={:.3e} SUP={:.3e} R2={:.3e} CORR={:.3e}'.format(*sc_test))
 
     return ypred_test, ytrue_test, sc_test, ypred_train, ytrue_train, sc_train,model
 

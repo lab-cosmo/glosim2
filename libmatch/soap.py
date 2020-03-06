@@ -42,7 +42,7 @@ def get_alchemy_frame( spkit, spkitMax,atoms=None,fpointer=None, nocenters=None,
     alchemyFrame = AlchemyFrame(atom=atoms, nocenters=nocenters, soapParams=soapParams,is_fast_average=is_fast_average)
     Nenv, Npowerspectrum = rawsoaps.shape
     if chem_channels:
-        for it in xrange(Nenv):
+        for it in range(Nenv):
             # soap[it] is (1,Npowerspectrum) so need to transpose it
             #  convert the soap vector of an environment from quippy descriptor to soap vectors
             # with chemical channels.
@@ -104,7 +104,7 @@ class mp_soap(object):
 
                 pbar.update()
         else:
-            print 'Nproces: ',self.nprocess
+            print('Nproces: ',self.nprocess)
             raise NotImplementedError('need at least 1 process')
 
         pbar.close()
@@ -186,9 +186,9 @@ def get_Soaps(atoms, nocenters=None, chem_channels=False, centerweight=1.0, gaus
             soapParams.append(soapParam)
         else:
             not_considered.append(it)
-            #print 'frame {} does not contain centers'.format(it)
+            #print('frame {} does not contain centers'.format(it))
     if len(not_considered)>0:
-        print 'frames\n {} \ndo not contain centers'.format(not_considered)
+        print('frames\n {} \ndo not contain centers'.format(not_considered))
     compute_soaps = mp_soap(soapParams,nprocess,dispbar=dispbar)
 
     Frames = compute_soaps.run()
@@ -221,7 +221,7 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
         nocenters = []
 
     zsp = spkitMax.keys()
-    zsp.sort()
+    sorted(zsp)
     lspecies = 'n_species=' + str(len(zsp)) + ' species_Z={ '
     for z in zsp:
         lspecies = lspecies + str(z) + ' '
@@ -239,8 +239,8 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
                 continue
             Ncenters += 1
 
-    atoms.set_cutoff(cutoff)
-    atoms.calc_connect()
+#    atoms.set_cutoff(cutoff)
+ #   atoms.calc_connect()
 
 
     spInFrame = spkit.keys()
@@ -267,7 +267,7 @@ def get_soap(atoms, spkit, spkitMax, nocenters=None, centerweight=1., gaussian_w
 
     desc = qp.descriptors.Descriptor(soapstr)
     # computes the soap descriptors for the full frame (atom)
-    soap = desc.calc(atoms ,grad=False)["descriptor"]
+    soap = desc.calc(atoms ,grad=False)["data"]
 
     if is_fast_average:
         soap = soap.mean(axis=0)
@@ -303,8 +303,8 @@ def Soap2AlchemySoap(rawsoap, spkitMax, nmax, lmax):
 
     ipair = {}
     # initialize the alchemical soap
-    for s1 in xrange(nspecies):
-        for s2 in xrange(
+    for s1 in range(nspecies):
+        for s2 in range(
                 nspecies):  # range(s1+1): we actually need to store also the reverse pairs if we want to go alchemical
             alchemySoapdict[(zspecies[s2], zspecies[s1])] = np.zeros(LENalchsoap, float)
             ipair[(zspecies[s2], zspecies[s1])] = 0
@@ -313,17 +313,17 @@ def Soap2AlchemySoap(rawsoap, spkitMax, nmax, lmax):
     isqrttwo = 1.0 / np.sqrt(2.0)
 
     # selpair and revpair are modified and in turn modify soaps because they are all pointing at the same memory block
-    for s1 in xrange(nspecies):
-        for n1 in xrange(nmax):
-            for s2 in xrange(s1 + 1):
+    for s1 in range(nspecies):
+        for n1 in range(nmax):
+            for s2 in range(s1 + 1):
                 selpair = alchemySoapdict[(zspecies[s2], zspecies[s1])]
                 # we need to reconstruct the spectrum for the inverse species order, that also swaps n1 and n2.
                 # This is again only needed to enable alchemical combination of e.g. alpha-beta and beta-alpha. Shit happens
                 revpair = alchemySoapdict[(zspecies[s1], zspecies[s2])]
                 isel = ipair[(zspecies[s2], zspecies[s1])]
-                for n2 in xrange(nmax if s2 < s1 else n1 + 1):
-                    for l in xrange(lmax + 1):
-                        # print s1, s2, n1, n2, isel, l+(self.lmax+1)*(n2+self.nmax*n1), l+(self.lmax+1)*(n1+self.nmax*n2)
+                for n2 in range(nmax if s2 < s1 else n1 + 1):
+                    for l in range(lmax + 1):
+                        # print(s1, s2, n1, n2, isel, l+(self.lmax+1)*(n2+self.nmax*n1), l+(self.lmax+1)*(n1+self.nmax*n2))
                         # selpair[isel] = rawsoap[isoap]
                         if (s1 != s2):
                             selpair[isel] = rawsoap[
