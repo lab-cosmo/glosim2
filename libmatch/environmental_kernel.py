@@ -332,22 +332,22 @@ def choose_envKernel_func(nthreads=4, isDeltaKernel=False,verbose=False):
     :return: Compiled inner_func_nbupper function with threads
     '''
     if nonumba:
-        print 'Using numpy version of envKernel function'
+        print('Using numpy version of envKernel function')
         get_envKernel = np_frameprod3_upper
     else:
         if verbose:
-            print 'Using compiled and threaded version of envKernel function'
+            print('Using compiled and threaded version of envKernel function')
 
         # if nthreads == 1:
         if verbose:
             print('1 threaded calc')
         if isDeltaKernel:
             if verbose:
-                print 'with implicit delta kernel function'
+                print('with implicit delta kernel function')
             get_envKernel = nb_frameprod_upper_delta_singlethread
         else:
             if verbose:
-                print 'with explicit delta kernel function'
+                print('with explicit delta kernel function')
             get_envKernel = nb_frameprod_upper_singlethread
         # TODO understand why it does not work well now
         # elif nthreads in [2,4,6,9,12,16,25,36,48,64,81,100]:
@@ -456,8 +456,8 @@ class mp_framesprod(object):
         return res
 
     @staticmethod
-    def listener(queue, Niter,dispbar):
-        print 'listener ',dispbar
+    def listener(queuie, Niter,dispbar):
+        print('listener ',dispbar)
         tbar = tqdm_cs(total=int(Niter),desc='Env kernels',disable=dispbar)
         for ii in iter(queue.get, None):
             tbar.update(ii)
@@ -507,7 +507,7 @@ def join_envKernel(results, slices,slices_1=None):
                             try:
                                 joined_results[(s1, s2)] = results[iii][(it, jt)]
                             except:
-                                print s1, s2, it, jt
+                                print(s1, s2, it, jt)
                 else:
 
                     for it, s1 in enumerate(sl1):
@@ -515,7 +515,7 @@ def join_envKernel(results, slices,slices_1=None):
                             try:
                                 joined_results[(s1, s2)] = results[iii][(it, jt)]
                             except:
-                                print s1, s2, it, jt
+                                print(s1, s2, it, jt)
             else:
                 for it, s1 in enumerate(sl1):
                         for jt, s2 in enumerate(sl2):
@@ -634,3 +634,4 @@ def get_environmentalKernels_singleprocess(atoms, nocenters=None, chem_channels=
 
 
     return environmentalKernels
+

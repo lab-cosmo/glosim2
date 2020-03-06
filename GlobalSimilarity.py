@@ -4,7 +4,7 @@ import time
 
 import numpy  as np
 import quippy as qp
-import cPickle as pck
+import pickle as pck
 
 from libmatch.chemical_kernel import Atoms2ChemicalKernelmat, deltaKernel
 from libmatch.environmental_kernel import get_environmentalKernels_mt_mp_chunks, \
@@ -16,7 +16,7 @@ try:
     import numba as nb
     nonumba = False
 except:
-    print 'Numba is not installed... this will be much slower.'
+    print('Numba is not installed... this will be much slower.')
     nonumba = True
 
 
@@ -194,8 +194,8 @@ if __name__ == '__main__':
     nocenters = sorted(list(set(nocenters)))
 
     ###### Start the app ######
-    print "{}".format(time.ctime())
-    print "Start Computing the global {} kernel of {}".format(global_kernel_type,filename)
+    print("{}".format(time.ctime()))
+    print("Start Computing the global {} kernel of {}".format(global_kernel_type,filename))
 
     # format of the output name
     if prefix == "": prefix = filename
@@ -205,7 +205,7 @@ if __name__ == '__main__':
              "-cotw" +str(cutoff_transition_width)
 
     if is_fast_average:
-        print 'Compute fast average kernel'
+        print('Compute fast average kernel')
         prefix += '-fastavg'
 
     fn_env_kernels = prefix+'-env_kernels.pck'
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     else:
         raise ValueError
     if not normalize_global_kernel: prefix += "-nonorm"
-    print  "using output prefix =", prefix
+    print("using output prefix =", prefix)
 
 
     st = time.time()
@@ -235,20 +235,20 @@ if __name__ == '__main__':
         'chem_channels': True, 'nocenters': nocenters,'is_fast_average':is_fast_average,
     }
 
-    print 'Reading {} input atomic structure from {}: done {}'.format(n,filename,s2hms(time.time() - st))
+    print('Reading {} input atomic structure from {}: done {}'.format(n,filename,s2hms(time.time() - st)))
 
     if nchunks == 1:
-        print 'Compute soap and environmental kernels with {} : {}'.format(nthreads,s2hms(time.time() - st))
+        print('Compute soap and environmental kernels with {} : {}'.format(nthreads,s2hms(time.time() - st)))
     else:
-        print 'Compute soap and environmental kernels with ' \
+        print('Compute soap and environmental kernels with ' \
               'a pool of {} workers and {} threads over {} chunks: {}'.format(nprocess, nthreads,
                                                                               nchunks * (nchunks + 1) // 2,
-                                                                              s2hms(time.time() - st))
+                                                                              s2hms(time.time() - st)))
     environmentalKernels = get_environmentalKernels(islow_memory=islow_memory,
                                 nthreads=nthreads,nprocess=nprocess, nchunks=nchunks,
                                 **soap_params)
 
-    print 'Compute environmental kernels: done {}'.format(s2hms(time.time() - st))
+    print('Compute environmental kernels: done {}'.format(s2hms(time.time() - st)))
 
     if save_env_kernels:
         with open(fn_env_kernels,'wb') as f:
@@ -259,9 +259,9 @@ if __name__ == '__main__':
                                     eps=1e-6, nthreads=8,normalize_global_kernel=normalize_global_kernel)
 
     if global_kernel_type == 'average':
-        print 'Compute global average kernel with zeta={} : done {}'.format(zeta, s2hms(time.time() - st))
+        print('Compute global average kernel with zeta={} : done {}'.format(zeta, s2hms(time.time() - st)))
     elif global_kernel_type == 'rematch':
-        print 'Compute global rematch kernel with gamma={} : done {}'.format(gamma, s2hms(time.time() - st))
+        print('Compute global rematch kernel with gamma={} : done {}'.format(gamma, s2hms(time.time() - st)))
 
 
     # Normalize the global kernel

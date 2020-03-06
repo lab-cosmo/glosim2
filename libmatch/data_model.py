@@ -59,7 +59,7 @@ class AlchemySoap(MutableMapping):
             self._localEnvironementDict = get_localEnv(qpatoms, centerIdx,
                                                        self._soapParams['cutoff'], onlyDict=True)
             self._info = {}
-            for key,item in qpatoms.arrays.iteritems():
+            for key,item in qpatoms.arrays.items():
                 if key in garbageKey:
                     continue
                 self._info[key] = item[centerIdx].copy()
@@ -80,7 +80,7 @@ class AlchemySoap(MutableMapping):
 
     def from_dict(self ,dictionary):
         filledKeys = []
-        for key ,item in dictionary.iteritems():
+        for key ,item in dictionary.items():
             if key[0] > key[1]:
                 # only upper part is considered (key[0] <= key[1])
                 continue
@@ -103,7 +103,7 @@ class AlchemySoap(MutableMapping):
     def get_centerInfo(self):
         
         if self.is_fast_average:
-            print 'fast average -> no center'
+            print('fast average -> no center')
         else:
             from ase import Atoms as aseAtoms
             info = {'z' :self._atomic_number ,'position' :self._position ,
@@ -113,7 +113,7 @@ class AlchemySoap(MutableMapping):
             return info
     def get_localEnvironement(self):
         if self.is_fast_average:
-            print 'fast average -> no center'
+            print('fast average -> no center')
         else:
             from ase import Atoms as aseAtoms
             return aseAtoms(**self._localEnvironementDict)
@@ -259,7 +259,7 @@ class ProjectedAlchemySoap(MutableMapping):
     def get_centerInfo(self):
 
         if self.is_fast_average:
-            print 'fast average -> no center'
+            print('fast average -> no center')
         else:
             from ase import Atoms as aseAtoms
             info = {'z': self._atomic_number, 'position': self._position,
@@ -270,7 +270,7 @@ class ProjectedAlchemySoap(MutableMapping):
 
     def get_localEnvironement(self):
         if self.is_fast_average:
-            print 'fast average -> no center'
+            print('fast average -> no center')
         else:
             from ase import Atoms as aseAtoms
             return aseAtoms(**self._localEnvironementDict)
@@ -362,7 +362,7 @@ class AtomicFrame(object):
         self._soapParams = soapParams
 
         self._infoDict = {}
-        for key,item in qpatoms.arrays.iteritems():
+        for key,item in qpatoms.arrays.items():
             if key in garbageKey:
                 continue
             self._infoDict[key] = item.copy()

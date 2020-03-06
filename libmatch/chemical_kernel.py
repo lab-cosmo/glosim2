@@ -443,7 +443,7 @@ def test_implementation(fingerprintsA, fingerprintsB=None):
         if not eee:
             not_equal.append((key, eee))
     if len(not_equal) == 0:
-        print 'partial matrices are identical'
+        print('partial matrices are identical')
     else:
-        print 'partial matrices are not identical in:'
-        print not_equal
+        print('partial matrices are not identical in:')
+        print(not_equal)

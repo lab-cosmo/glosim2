@@ -158,7 +158,7 @@ class mp_soap(object):
 
                 pbar.update()
         else:
-            print 'Nproces: ' ,self.nprocess
+            print('Nproces: ' ,self.nprocess)
             raise NotImplementedError('need at least 1 process')
 
         pbar.close()
