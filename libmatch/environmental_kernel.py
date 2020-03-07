@@ -456,7 +456,7 @@ class mp_framesprod(object):
         return res
 
     @staticmethod
-    def listener(queuie, Niter,dispbar):
+    def listener(queue, Niter,dispbar):
         print('listener ',dispbar)
         tbar = tqdm_cs(total=int(Niter),desc='Env kernels',disable=dispbar)
         for ii in iter(queue.get, None):
