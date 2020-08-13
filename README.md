@@ -1,7 +1,8 @@
 # Glosim2
 
+This package is not further developed. We might be able to incorporate small bugfixes - particularly if you propose a fix and submit a pull request - but the original developers do not have time to properly maintain it. You may want to check https://github.com/cosmo-epfl/librascal where most of the development efforts are currently focused
 
-## Instalation
+## Installation
 
 ### Python Packages and Code
 
